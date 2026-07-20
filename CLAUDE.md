@@ -45,6 +45,11 @@ Prefer `pnpm exec` over `npx` for one-off CLI invocations in this workspace.
 - **No `.moext` / Ed25519 signing in this repo.** That signing pipeline
   belongs to the `builtin-plugins` repo (it signs plugin bundles, not npm
   packages).
+- **Schema/CLI publish lockstep**: `packages/plugin-manifest-schema` is
+  inlined into `@motrix/plugin-cli` at build time (`tsup.config.ts`
+  `noExternal`). Any schema change MUST republish `@motrix/plugin-cli` in the
+  same publish batch — otherwise plugin authors' `motrix-plugin validate`
+  and the Motrix host will disagree about manifest validity.
 
 ## Publish order
 

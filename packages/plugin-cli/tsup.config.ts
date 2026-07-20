@@ -11,9 +11,10 @@ export default defineConfig({
   clean: true,
   target: 'node20',
   platform: 'node',
-  // Inline @motrix/plugin-manifest-schema into the published dist: the CLI
-  // ships with zero @motrix runtime deps and no version-skew surface for
-  // consumers (the schema is versioned by the CLI build that embeds it).
+  // Inline @motrix/plugin-manifest-schema into the published dist: consumers
+  // get zero transitive @motrix deps to resolve. The embedded schema is fixed
+  // at build time — schema releases must ship with a matching CLI release
+  // (lockstep rule, see CLAUDE.md).
   noExternal: [/^@motrix\/plugin-manifest-schema$/],
   onSuccess: async () => {
     const { rm, cp } = await import('node:fs/promises')

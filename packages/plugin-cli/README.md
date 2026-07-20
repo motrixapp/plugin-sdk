@@ -37,6 +37,15 @@ Validate `motrix-plugin.json` against
 [`@motrix/plugin-manifest-schema`](https://www.npmjs.com/package/@motrix/plugin-manifest-schema) —
 the same schema the Motrix host uses when installing a plugin.
 
+### Schema versioning
+
+`validate` checks your manifest against the `@motrix/plugin-manifest-schema`
+version **embedded in the CLI at build time** — not whatever copy of the
+schema your own project has installed. Keep `@motrix/plugin-cli` up to date
+so its embedded schema matches the Motrix host you're targeting; schema
+releases always ship together with a matching CLI release (lockstep), so
+staying current on the CLI keeps you current on the schema too.
+
 ```bash
 motrix-plugin lint
 ```

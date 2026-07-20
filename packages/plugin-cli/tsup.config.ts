@@ -11,9 +11,9 @@ export default defineConfig({
   clean: true,
   target: 'node20',
   platform: 'node',
-  // The workspace-only @motrix/plugin-manifest-schema package is not on the
-  // npm registry, so CLI consumers will not have it installed. Force tsup to
-  // inline it into the published dist instead of treating it as external.
+  // Inline @motrix/plugin-manifest-schema into the published dist: the CLI
+  // ships with zero @motrix runtime deps and no version-skew surface for
+  // consumers (the schema is versioned by the CLI build that embeds it).
   noExternal: [/^@motrix\/plugin-manifest-schema$/],
   onSuccess: async () => {
     const { rm, cp } = await import('node:fs/promises')

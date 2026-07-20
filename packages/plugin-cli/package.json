@@ -24,11 +24,9 @@
     "test": "vitest run"
   },
   "dependencies": {
-    "ajv": "^8.17.1",
     "chokidar": "^4",
     "commander": "^12",
     "esbuild": "^0.24",
-    "yauzl": "^3",
     "yazl": "^2"
   },
   "devDependencies": {

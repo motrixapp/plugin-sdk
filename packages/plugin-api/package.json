@@ -13,12 +13,13 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://gitlab.com/agalwood/motrix-turbo.git",
+    "url": "git+https://github.com/motrixapp/plugin-sdk.git",
     "directory": "packages/plugin-api"
   },
   "license": "MIT",
   "scripts": {
     "build": "tsup",
+    "typecheck": "tsc --noEmit",
     "test": "vitest run"
   },
   "devDependencies": {

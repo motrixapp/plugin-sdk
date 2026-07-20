@@ -2,7 +2,6 @@
   "name": "@motrix/plugin-cli",
   "version": "2.0.0",
   "type": "module",
-  "main": "dist/index.js",
   "bin": {
     "motrix-plugin": "dist/bin/motrix-plugin.js",
     "create-motrix-plugin": "dist/bin/create-motrix-plugin.js"
@@ -15,12 +14,13 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://gitlab.com/agalwood/motrix-turbo.git",
+    "url": "git+https://github.com/motrixapp/plugin-sdk.git",
     "directory": "packages/plugin-cli"
   },
   "license": "MIT",
   "scripts": {
     "build": "tsup",
+    "typecheck": "tsc --noEmit",
     "test": "vitest run"
   },
   "dependencies": {
@@ -33,6 +33,7 @@
   },
   "devDependencies": {
     "@motrix/plugin-manifest-schema": "workspace:*",
+    "@types/node": "^24",
     "tsup": "^8",
     "typescript": "^5.6",
     "vitest": "^3",

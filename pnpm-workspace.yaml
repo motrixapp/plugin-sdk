@@ -2,6 +2,10 @@ packages:
   - 'packages/*'
 
 # esbuild ships prebuilt @esbuild/* platform binaries via optionalDependencies,
-# so its install script is unnecessary (silences ERR_PNPM_IGNORED_BUILDS).
-ignoredBuiltDependencies:
-  - esbuild
+# so its install script is unnecessary — but pnpm 11 requires an explicit
+# build-script decision for any dependency that ships one
+# (ERR_PNPM_IGNORED_BUILDS otherwise). Allowing it mirrors the Motrix app
+# workspace and sibling repos (cli, builtin-plugins) and matches how npm
+# installs it for end users anyway.
+allowBuilds:
+  esbuild: true

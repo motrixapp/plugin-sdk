@@ -28,7 +28,7 @@ Scaffold a new plugin project from a template (`basic-resolver` or
 motrix-plugin dev
 ```
 Watch-build the plugin with esbuild and relaunch a local Motrix install
-against it (`Motrix` on `$PATH` or `$MOTRIX_BIN`).
+against it (found via `$MOTRIX_BIN` or a standard Motrix install location).
 
 ```bash
 motrix-plugin validate

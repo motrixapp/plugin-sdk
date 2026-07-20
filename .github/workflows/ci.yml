@@ -68,14 +68,18 @@ jobs:
       - name: Lint
         run: pnpm lint
 
+      # Build must precede Typecheck: plugin-cli's façade re-exports
+      # @motrix/plugin-manifest-schema, whose `types` resolves to its built
+      # dist/index.d.ts — on a clean checkout, typecheck-before-build fails
+      # with TS2307.
+      - name: Build
+        run: pnpm build
+
       - name: Typecheck
         run: pnpm typecheck
 
       - name: Test
         run: pnpm test
-
-      - name: Build
-        run: pnpm build
 
       - name: Schema façade check
         run: pnpm run check:facade

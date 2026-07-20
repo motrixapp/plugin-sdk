@@ -44,7 +44,11 @@ jobs:
           dest="${RUNNER_TEMP}/pnpm-standalone"
           mkdir -p "$dest"
           cd "$dest"
-          curl -fsSL --retry 3 -o "$asset" \
+          # --retry alone does not cover connection-level failures like
+          # curl 52 "Empty reply from server" (seen flaking on the Windows
+          # runners); --retry-all-errors makes every failure retryable.
+          curl -fsSL --retry 3 --retry-all-errors --retry-delay 2 \
+            --connect-timeout 20 -o "$asset" \
             "https://github.com/pnpm/pnpm/releases/download/v${version}/${asset}"
           if [[ "$asset" == *.zip ]]; then
             powershell.exe -NoProfile -Command "Expand-Archive -Path '${asset}' -DestinationPath '.' -Force"

@@ -12,7 +12,7 @@
 
 | 包 | npm 包名 | 作用 |
 |---|---|---|
-| `packages/plugin-manifest-schema` | `@motrix/plugin-manifest-schema` | 插件 manifest（`motrix-plugin.json`）的 [Zod](https://zod.dev) schema——这个形状唯一的权威来源 |
+| `packages/plugin-manifest-schema` | `@motrix/plugin-manifest-schema` | 插件 manifest（`motrix-plugin.json`）的 [Zod](https://zod.dev) schema——这个形状的唯一权威来源 |
 | `packages/plugin-api` | `@motrix/plugin-api` | 面向插件作者的类型定义，以及插件运行时导入的 `motrix:plugin-api` 虚拟模块（ambient module）声明 |
 | `packages/plugin-cli` | `@motrix/plugin-cli` | `motrix-plugin` CLI——`init` / `validate` / `lint` / `pack` / `dev`——构建时会把 manifest schema 内联进自己的产物 |
 | `packages/create-motrix-plugin` | `create-motrix-plugin` | `pnpm create motrix-plugin` 脚手架，内部委托给 `plugin-cli` |

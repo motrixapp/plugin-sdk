@@ -38,11 +38,10 @@ Prefer `pnpm exec` over `npx` for one-off CLI invocations in this workspace.
   else. `scripts/check-facade.mjs` (run in CI) enforces this. Any manifest
   validation change belongs in `packages/plugin-manifest-schema/`, never in
   the façade file.
-- **Published versions are load-bearing**: these packages are published to
-  npm, and consumers pin them — `motrix-turbo` and `builtin-plugins` both pin
-  `^2.0.0`. A wire-shape/behavior change here requires publishing a new
-  version and bumping the dependency in those repos; it does not take effect
-  by editing source alone.
+- **Published versions are load-bearing**: these packages ship to consumers
+  via npm — once published, `motrix-turbo` and `builtin-plugins` pin
+  `^2.0.0`. Any wire-shape or API change requires a publish here plus a
+  dependency bump there; it does not take effect by editing source alone.
 - **No `.moext` / Ed25519 signing in this repo.** That signing pipeline
   belongs to the `builtin-plugins` repo (it signs plugin bundles, not npm
   packages).

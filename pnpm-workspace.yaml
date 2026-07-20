@@ -1,0 +1,7 @@
+packages:
+  - 'packages/*'
+
+# esbuild ships prebuilt @esbuild/* platform binaries via optionalDependencies,
+# so its install script is unnecessary (silences ERR_PNPM_IGNORED_BUILDS).
+ignoredBuiltDependencies:
+  - esbuild

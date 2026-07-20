@@ -1,0 +1,29 @@
+{
+  "name": "@motrix/plugin-api",
+  "version": "2.0.0",
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "files": [
+    "dist",
+    "src/virtual-module.d.ts"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://gitlab.com/agalwood/motrix-turbo.git",
+    "directory": "packages/plugin-api"
+  },
+  "license": "MIT",
+  "scripts": {
+    "build": "tsup",
+    "test": "vitest run"
+  },
+  "devDependencies": {
+    "tsup": "^8",
+    "typescript": "^5.6",
+    "vitest": "^3"
+  }
+}

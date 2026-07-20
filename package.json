@@ -1,0 +1,17 @@
+{
+  "name": "motrix-plugin-sdk",
+  "private": true,
+  "type": "module",
+  "engines": { "node": ">=20" },
+  "packageManager": "pnpm@11.13.0",
+  "scripts": {
+    "build": "pnpm -r build",
+    "typecheck": "pnpm -r typecheck",
+    "test": "pnpm -r test",
+    "lint": "biome check .",
+    "check:facade": "node scripts/check-facade.mjs"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "^2.5.4"
+  }
+}

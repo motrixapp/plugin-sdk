@@ -1,0 +1,12 @@
+{
+  "name": "create-motrix-plugin",
+  "version": "2.0.0",
+  "type": "module",
+  "bin": "bin/create.mjs",
+  "files": [
+    "bin"
+  ],
+  "dependencies": {
+    "@motrix/plugin-cli": "workspace:*"
+  }
+}

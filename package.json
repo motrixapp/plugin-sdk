@@ -2,7 +2,9 @@
   "name": "motrix-plugin-sdk",
   "private": true,
   "type": "module",
-  "engines": { "node": ">=20" },
+  "engines": {
+    "node": ">=20"
+  },
   "packageManager": "pnpm@11.13.0",
   "scripts": {
     "build": "pnpm -r build",

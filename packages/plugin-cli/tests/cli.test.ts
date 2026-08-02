@@ -38,11 +38,20 @@ describe('motrix-plugin CLI', () => {
     expect(stdout).toContain('dev')
   })
 
-  it('--version exits 0 and outputs 2.0.0', () => {
+  // Read the expected version from package.json rather than hardcoding it:
+  // the string in bin/motrix-plugin.ts and the one in package.json must agree,
+  // and that is the property worth testing — not one specific release number.
+  it('--version exits 0 and matches package.json', async () => {
+    const pkg = JSON.parse(
+      await readFile(
+        path.join(worktreeRoot, 'packages/plugin-cli/package.json'),
+        'utf8'
+      )
+    )
     const stdout = execFileSync('node', [BIN, '--version'], {
       encoding: 'utf8',
     })
-    expect(stdout.trim()).toBe('2.0.0')
+    expect(stdout.trim()).toBe(pkg.version)
   })
 
   // A zip records DOS timestamps that yazl derives with LOCAL-time getters, so

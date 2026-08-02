@@ -45,6 +45,10 @@ program.command('pack').action(async () => {
   try {
     const r = await pack({ projectDir: process.cwd() })
     console.log(`Packed → ${r.outFile} (${r.totalSize} bytes)`)
+    // Printed because a registry entry needs it verbatim as package.sha256,
+    // and because the archive is reproducible: re-packing the same tree must
+    // print this same digest.
+    console.log(`sha256   ${r.sha256}`)
   } catch (e) {
     console.error((e as Error).message)
     process.exit(1)

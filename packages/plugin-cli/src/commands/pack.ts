@@ -1,5 +1,6 @@
 // packages/plugin-cli/src/commands/pack.ts
 
+import { createHash } from 'node:crypto'
 import { createWriteStream } from 'node:fs'
 import { mkdir, readdir, readFile, stat, unlink } from 'node:fs/promises'
 import path from 'node:path'
@@ -20,16 +21,55 @@ export interface PackOptions {
 const BUNDLE_MAX = 1024 * 1024
 const TOTAL_MAX = 5 * 1024 * 1024
 
+/**
+ * Timestamp stamped on every zip entry, pinning the archive's bytes.
+ *
+ * A zip stores modification times as a DOS date/time, and yazl derives that
+ * from a Date using LOCAL-time getters (getFullYear/getMonth/getDate/...).
+ * Left alone it uses each file's real mtime, which is why packing the same tree
+ * twice produced two different archives: esbuild rewrites dist/plugin.js on
+ * every run, so its mtime — and the resulting sha256 — changed every time.
+ *
+ * Constructing with the LOCAL-time Date constructor is deliberate and is what
+ * makes this timezone-independent: yazl reads back exactly the fields this
+ * constructor sets, so `new Date(1980, 0, 1)` yields the DOS epoch in every
+ * timezone. The alternative — forcing `process.env.TZ = 'UTC'`, as the
+ * builtin-plugins pipeline does — works only because that script owns its
+ * process; mutating a process-global from a library function would leak into
+ * the caller.
+ */
+const DOS_EPOCH = new Date(1980, 0, 1, 0, 0, 0)
+/** Fixed permissions so a umask difference cannot change the archive. */
+const ENTRY_MODE = 0o100644
+
+interface YazlAddFileOptions {
+  mtime?: Date
+  mode?: number
+}
+
 interface YazlZipFile {
-  addFile(realPath: string, metadataPath: string): void
+  addFile(
+    realPath: string,
+    metadataPath: string,
+    options?: YazlAddFileOptions
+  ): void
   end(): void
   on(event: 'error', handler: (err: Error) => void): void
   outputStream: NodeJS.ReadableStream
 }
 
-export async function pack(
-  opts: PackOptions
-): Promise<{ outFile: string; bundleSize: number; totalSize: number }> {
+export interface PackResult {
+  outFile: string
+  bundleSize: number
+  totalSize: number
+  /**
+   * sha256 of the archive. Reproducible for a given source tree (see
+   * DOS_EPOCH), and the value a registry entry's `package.sha256` needs.
+   */
+  sha256: string
+}
+
+export async function pack(opts: PackOptions): Promise<PackResult> {
   const projectDir = path.resolve(opts.projectDir)
   const manifestPath = path.join(
     projectDir,
@@ -74,31 +114,45 @@ export async function pack(
 
   // build .moext
   const moextOut = path.join(outDir, `${manifest.id}-${manifest.version}.moext`)
-  // yazl.ZipFile has no TS types — cast via unknown
-  const z: YazlZipFile = new (
-    yazl as { ZipFile: new () => YazlZipFile }
-  ).ZipFile()
-  z.addFile(manifestPath, 'motrix-plugin.json')
-  z.addFile(bundlePath, 'dist/plugin.js')
+
+  // Collect first, write second: entries go into the archive in sorted order so
+  // the layout never depends on readdir()'s order, which is filesystem-defined.
+  const entries: { abs: string; rel: string }[] = [
+    { abs: manifestPath, rel: 'motrix-plugin.json' },
+    { abs: bundlePath, rel: 'dist/plugin.js' },
+  ]
   // include optional top-level assets when present
   for (const f of ['icon.png', 'LICENSE', 'CHANGELOG.md']) {
     try {
       await stat(path.join(projectDir, f))
-      z.addFile(path.join(projectDir, f), f)
+      entries.push({ abs: path.join(projectDir, f), rel: f })
     } catch {}
   }
   // locale files
   if (manifest.l10n) {
+    const localeDir = path.join(projectDir, manifest.l10n)
+    let localeEntries: string[] = []
     try {
-      const localeDir = path.join(projectDir, manifest.l10n)
-      const entries = await readdir(localeDir, { withFileTypes: true })
-      for (const e of entries) {
-        if (!e.isFile()) continue
-        z.addFile(path.join(localeDir, e.name), `${manifest.l10n}/${e.name}`)
-      }
-    } catch {
-      // ENOENT or unreadable locale dir — skip optional locale files.
+      localeEntries = await readdir(localeDir)
+    } catch (err) {
+      // An absent locale dir is legal; anything else is a real failure and must
+      // not be swallowed into a silently incomplete archive.
+      if ((err as NodeJS.ErrnoException)?.code !== 'ENOENT') throw err
     }
+    for (const name of localeEntries) {
+      const abs = path.join(localeDir, name)
+      if (!(await stat(abs)).isFile()) continue
+      entries.push({ abs, rel: `${manifest.l10n}/${name}` })
+    }
+  }
+  entries.sort((a, b) => (a.rel < b.rel ? -1 : a.rel > b.rel ? 1 : 0))
+
+  // yazl.ZipFile has no TS types — cast via unknown
+  const z: YazlZipFile = new (
+    yazl as { ZipFile: new () => YazlZipFile }
+  ).ZipFile()
+  for (const { abs, rel } of entries) {
+    z.addFile(abs, rel, { mtime: DOS_EPOCH, mode: ENTRY_MODE })
   }
   z.end()
   await new Promise<void>((res, rej) => {
@@ -109,10 +163,15 @@ export async function pack(
       .on('close', () => res())
       .on('error', rej)
   })
-  const total = (await stat(moextOut)).size
-  if (total > TOTAL_MAX) {
+  const archive = await readFile(moextOut)
+  if (archive.byteLength > TOTAL_MAX) {
     await unlink(moextOut)
-    throw new Error(`moext ${total} bytes > ${TOTAL_MAX} byte cap`)
+    throw new Error(`moext ${archive.byteLength} bytes > ${TOTAL_MAX} byte cap`)
   }
-  return { outFile: moextOut, bundleSize: bundle.byteLength, totalSize: total }
+  return {
+    outFile: moextOut,
+    bundleSize: bundle.byteLength,
+    totalSize: archive.byteLength,
+    sha256: createHash('sha256').update(archive).digest('hex'),
+  }
 }

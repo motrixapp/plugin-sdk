@@ -1,2 +1,53 @@
+# Scoped to what this repo actually produces: a pnpm workspace of TypeScript
+# packages built with tsup, tested with vitest, linted with biome, published to
+# npm. Rules for tooling we do not use are deliberately omitted — a rule that
+# can never match only obscures the ones that do.
+
+# Dependencies
 node_modules/
+
+# Build output — tsup writes packages/*/dist. The `files` field in each
+# package.json is the npm-side whitelist; this is its git-side counterpart.
 dist/
+
+# `npm pack` / `pnpm pack` tarballs, produced when verifying publish contents
+*.tgz
+
+# vitest --coverage
+coverage/
+
+# tsc incremental state. Not produced today (no `incremental`/`composite` in
+# any tsconfig) but costless to pre-empt if one is ever enabled.
+*.tsbuildinfo
+
+# Logs from any package manager or tool
+*.log
+
+# Secrets and local overrides. `.npmrc` is intentionally NOT ignored: pnpm
+# projects legitimately commit one for registry/hoisting settings, and auth
+# tokens belong in ~/.npmrc, never here.
+.env
+.env.*
+!.env.example
+
+# This is a pnpm-only workspace (see packageManager + pnpm-workspace.yaml). A
+# lock file from another package manager means someone ran the wrong tool; keep
+# it out of the history instead of reconciling it later.
+package-lock.json
+yarn.lock
+bun.lockb
+
+# OS metadata — CI runs ubuntu/windows/macos, so all three occur in practice
+.DS_Store
+._*
+Thumbs.db
+Desktop.ini
+
+# Editors. Ignore the directory's *contents* rather than the directory itself,
+# so shared settings can still be whitelisted — git cannot re-include a file
+# whose parent directory is excluded.
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json
+.idea/
+*.swp

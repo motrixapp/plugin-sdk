@@ -2,7 +2,7 @@
 import { readFile } from 'node:fs/promises'
 import path from 'node:path'
 import { validateLocaleCoverage } from '../lint-rules/i18n-coverage'
-import { isReservedPublisher, ManifestSchema } from '../manifest-schema'
+import { isReservedPublisher, validateManifest } from '../manifest-schema'
 
 export async function validate(
   projectDir: string
@@ -13,7 +13,9 @@ export async function validate(
       path.join(projectDir, 'motrix-plugin.json'),
       'utf8'
     )
-    const m = ManifestSchema.parse(JSON.parse(raw))
+    // Same gate `pack` runs, so the two commands can never disagree about
+    // whether a manifest is shippable.
+    const m = validateManifest(JSON.parse(raw))
     // The plugin CLI only services community authors; reserved publishers
     // (motrix.*, verified.*, official.*, system.*) are reserved for built-in
     // plugins shipped inside the app bundle.

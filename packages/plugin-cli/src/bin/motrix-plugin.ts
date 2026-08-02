@@ -39,8 +39,16 @@ program
   )
 
 program.command('pack').action(async () => {
-  const r = await pack({ projectDir: process.cwd() })
-  console.log(`Packed → ${r.outFile} (${r.totalSize} bytes)`)
+  // A failed gate is an expected outcome (bad manifest, missing locale key,
+  // oversized bundle), not a crash — report it the way `validate` does instead
+  // of letting an unhandled rejection print a V8 stack trace over the message.
+  try {
+    const r = await pack({ projectDir: process.cwd() })
+    console.log(`Packed → ${r.outFile} (${r.totalSize} bytes)`)
+  } catch (e) {
+    console.error((e as Error).message)
+    process.exit(1)
+  }
 })
 
 program.command('validate').action(async () => {

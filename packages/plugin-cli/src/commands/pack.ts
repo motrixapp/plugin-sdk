@@ -8,7 +8,7 @@ import { build } from 'esbuild'
 // @ts-expect-error — no @types/yazl available
 import yazl from 'yazl'
 import { validateLocaleCoverage } from '../lint-rules/i18n-coverage'
-import { ManifestSchema } from '../manifest-schema'
+import { validateManifest } from '../manifest-schema'
 
 export interface PackOptions {
   projectDir: string
@@ -35,9 +35,19 @@ export async function pack(
     projectDir,
     opts.manifest ?? 'motrix-plugin.json'
   )
-  const manifest = ManifestSchema.parse(
+  // Every manifest/asset gate runs BEFORE esbuild writes anything, so a
+  // rejected plugin leaves no half-built bundle behind — and, more importantly,
+  // so `pack` can never emit a .moext the host refuses to install.
+  // validateManifest adds the cross-field hooks => hostPermissions invariant on
+  // top of the schema parse; that rule used to live only in the separate
+  // `validate-host-permissions` subcommand, which meant a plain `pack` shipped
+  // exactly the manifest that made motrix.filename-template@1.1.0
+  // uninstallable.
+  const manifest = validateManifest(
     JSON.parse(await readFile(manifestPath, 'utf8'))
   )
+  await validateLocaleCoverage(projectDir, manifest)
+
   const entry = opts.entry ?? 'src/index.ts'
   const outDir = path.join(projectDir, opts.outDir ?? 'dist')
   await mkdir(outDir, { recursive: true })
@@ -61,8 +71,6 @@ export async function pack(
       `bundle ${bundle.byteLength} bytes > ${BUNDLE_MAX} byte cap`
     )
   }
-
-  await validateLocaleCoverage(projectDir, manifest)
 
   // build .moext
   const moextOut = path.join(outDir, `${manifest.id}-${manifest.version}.moext`)

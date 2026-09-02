@@ -84,6 +84,28 @@ describe('motrix-plugin init', () => {
     expect(tplFiles).toHaveLength(0)
   })
 
+  it.each(['basic-resolver', 'post-action'] as const)(
+    '%s: pins the current SDK and build-tool generations',
+    async (template) => {
+      const result = await init({
+        projectName: `dependency-${template}`,
+        template,
+        destDir,
+        publisher: 'alice',
+      })
+      const generatedPackage = JSON.parse(
+        readFileSync(path.join(result.created, 'package.json'), 'utf8')
+      )
+
+      expect(generatedPackage.devDependencies).toEqual({
+        '@motrix/plugin-api': '^2.1.0',
+        '@motrix/plugin-cli': '^2.1.1',
+        esbuild: '^0.28.2',
+        typescript: '^7.0.2',
+      })
+    }
+  )
+
   it('template substitution: motrix-plugin.json has correct id and no unresolved vars', async () => {
     const result = await init({
       projectName: 'demo',

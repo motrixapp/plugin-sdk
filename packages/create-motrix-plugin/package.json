@@ -1,6 +1,6 @@
 {
   "name": "create-motrix-plugin",
-  "version": "2.0.0",
+  "version": "2.0.1",
   "description": "Scaffold a new Motrix plugin project — `pnpm create motrix-plugin`",
   "type": "module",
   "bin": "bin/create.mjs",

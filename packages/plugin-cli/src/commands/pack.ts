@@ -45,6 +45,7 @@ const ENTRY_MODE = 0o100644
 interface YazlAddFileOptions {
   mtime?: Date
   mode?: number
+  forceDosTimestamp?: boolean
 }
 
 interface YazlZipFile {
@@ -152,7 +153,14 @@ export async function pack(opts: PackOptions): Promise<PackResult> {
     yazl as { ZipFile: new () => YazlZipFile }
   ).ZipFile()
   for (const { abs, rel } of entries) {
-    z.addFile(abs, rel, { mtime: DOS_EPOCH, mode: ENTRY_MODE })
+    z.addFile(abs, rel, {
+      mtime: DOS_EPOCH,
+      mode: ENTRY_MODE,
+      // yazl >=3.3 adds an absolute Unix timestamp field by default. Its
+      // bytes vary with the timezone used to construct DOS_EPOCH, while the
+      // required DOS fields below are deliberately local-time normalized.
+      forceDosTimestamp: true,
+    })
   }
   z.end()
   await new Promise<void>((res, rej) => {

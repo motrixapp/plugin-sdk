@@ -8,6 +8,9 @@ declare module 'motrix:plugin-api' {
     | { [k: string]: JsonValue }
 
   export interface HookCtxBase {
+    readonly schemaVersion: 1
+    readonly invocationId: string
+    readonly taskId: string
     readonly sourceUrl: string
     readonly createdBy: 'user' | 'protocol' | 'api'
     readonly requestedAt: number
@@ -35,21 +38,80 @@ declare module 'motrix:plugin-api' {
   }
 
   export interface BeforeFinalizeContext extends HookCtxBase {
-    readonly task: { id: string; filePath: string; saveDir: string }
+    readonly task: PluginTaskSnapshotV1
+    readonly inputFilePath: string
     readonly filePath: string
+    readonly targetFilePath: string
     update(patch: Partial<{ filePath: string }>): void
   }
 
-  export interface AfterCompleteContext {
-    readonly task: { id: string; filePath: string; saveDir: string }
-    readonly filePath: string
-    readonly metadata: ReadonlyPluginMetadata
+  export interface ErrorDescriptorV1 {
+    readonly code: string
+    readonly message: string
+    readonly detailKey: string | null
+    readonly detailParams: Readonly<Record<string, string>> | null
   }
 
-  export interface OnErrorContext {
-    readonly task: { id: string; filePath: string; saveDir: string }
-    readonly error: { code: string; message: string }
+  export interface PluginTaskSnapshotV1 {
+    readonly schemaVersion: 1
+    readonly id: string
+    readonly name: string
+    readonly type: 'http' | 'ftp' | 'bt' | 'magnet' | 'metalink'
+    readonly kind: 'direct' | 'bt' | 'hls' | 'mux'
+    readonly status:
+      | 'queued'
+      | 'fetching_metadata'
+      | 'metadata_ready'
+      | 'downloading'
+      | 'finalizing'
+      | 'seeding'
+      | 'paused'
+      | 'completed'
+      | 'error'
+      | 'removed'
+    readonly filePath: string
+    readonly saveDir: string
+    readonly filename: string
+    readonly progress: number
+    readonly totalBytes: number
+    readonly downloadedBytes: number
+    readonly uploadedBytes: number
+    readonly sizeWhenDone: number
+    readonly fileCount: number
+    readonly createdAt: number
+    readonly updatedAt: number
+    readonly finishedAt: number | null
+    readonly category: string | null
+    readonly infoHash: string | null
+    readonly error: ErrorDescriptorV1 | null
+  }
+
+  export interface DeliveryEnvelopeV1 {
+    readonly schemaVersion: 1
+    /** Stable across retries of the same plugin delivery. */
+    readonly id: string
+    /** Identifies the task occurrence that created this delivery. */
+    readonly occurrenceId: string
+    /** Unix timestamp in milliseconds for the source occurrence. */
+    readonly occurredAt: number
+  }
+
+  export interface PostHookContextBase {
+    readonly schemaVersion: 1
+    /** Fresh for every delivery attempt. */
+    readonly invocationId: string
+    readonly taskId: string
+    readonly task: PluginTaskSnapshotV1
+    readonly filePath: string
+    readonly delivery: DeliveryEnvelopeV1
     readonly metadata: ReadonlyPluginMetadata
+    readonly signal: AbortSignal
+  }
+
+  export interface AfterCompleteContext extends PostHookContextBase {}
+
+  export interface OnErrorContext extends PostHookContextBase {
+    readonly error: ErrorDescriptorV1
   }
 
   export interface PluginMetadata {

@@ -191,6 +191,9 @@ Hook 就是下载的生命周期。代码里实现的每个 hook 都要同时在
 | `afterComplete` | 文件已落盘 | 副作用:通知、后处理、交接 |
 | `onError` | 任务失败 | 读取 `error.code`/`error.message`,记日志或通知 |
 
+Post-hook 会收到 `ctx.delivery`：同一次投递发生重试时，`id` 保持稳定；
+`ctx.invocationId` 则标识当前这一次尝试。插件可以用稳定 id 保证外部副作用幂等。
+
 Role 决定同一 hook 上多个插件的执行顺序:
 `resolve` → `enrich` → `post-process` → `audit`。其中两个与 category
 挂钩:`resolve` 要求 `site-resolver` category,`post-process` 要求

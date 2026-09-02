@@ -10,7 +10,7 @@ import { validateHostPermissions } from '../commands/validate-host-permissions'
 const program = new Command()
   .name('motrix-plugin')
   .description('Motrix plugin developer tools')
-  .version('2.1.0')
+  .version('2.1.1')
 
 program
   .command('init <name>')

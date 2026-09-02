@@ -37,6 +37,24 @@ hooks.beforeCreate(async (ctx) => {
 })
 ```
 
+## Stable post-hook delivery identity
+
+Since 2.1, `afterComplete` and `onError` receive a durable delivery envelope:
+
+```ts
+hooks.afterComplete(async (ctx) => {
+  log.info('download finalized', {
+    deliveryId: ctx.delivery.id,
+    occurrenceId: ctx.delivery.occurrenceId,
+    filePath: ctx.filePath,
+  })
+})
+```
+
+`ctx.delivery.id` remains stable when Motrix retries the same delivery, while
+`ctx.invocationId` identifies the individual attempt. Retry counters, lease
+state, and scheduler diagnostics are intentionally not exposed to plugins.
+
 Make sure `src/virtual-module.d.ts` is visible to the TypeScript compiler.
 Installing this package is enough — its `files` entry ships the `.d.ts`
 alongside `dist`, and TypeScript picks up ambient module declarations from

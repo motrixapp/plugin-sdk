@@ -198,6 +198,10 @@ declared in `contributes.hooks` with a role:
 | `afterComplete` | File finalized on disk | Side effects: notify, post-process, hand off |
 | `onError` | A task failed | Inspect `error.code`/`error.message`, log or notify |
 
+Post-hooks receive `ctx.delivery`: its `id` remains stable across retries of
+the same delivery, while `ctx.invocationId` identifies the current attempt.
+Plugins can use the stable id for idempotent external side effects.
+
 Roles order execution across plugins within a hook:
 `resolve` → `enrich` → `post-process` → `audit`. Two are category-gated:
 `resolve` requires the `site-resolver` category, `post-process` requires

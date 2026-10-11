@@ -135,7 +135,54 @@ declare module 'motrix:plugin-api' {
     onError(fn: (ctx: OnErrorContext) => Promise<void>): void
   }
 
+  /** A ref is an opaque, single-invocation credential; it is never a path. */
+  export interface OperationContext {
+    readonly jobId: string
+    /** Cancellation surface supported by the sandbox. Listener count is bounded. */
+    readonly signal: Pick<
+      AbortSignal,
+      | 'aborted'
+      | 'reason'
+      | 'throwIfAborted'
+      | 'addEventListener'
+      | 'removeEventListener'
+    >
+    progress(value: {
+      phase: 'preparing' | 'running'
+      fraction?: number
+    }): Promise<void>
+    fail(code: string): never
+    readonly media: {
+      probe(file: string): Promise<{
+        durationMs?: number
+        streams: Array<{
+          type: 'video' | 'audio' | 'subtitle' | 'other'
+          codec?: string
+        }>
+      }>
+      mergeStreams(value: {
+        video: string
+        audio: string
+        output: string
+        format: 'mp4' | 'mkv'
+        expectedDurationMs?: number
+      }): Promise<void>
+    }
+    readonly files: {
+      readText(file: string): Promise<string>
+      writeText(file: string, content: string): Promise<void>
+    }
+  }
+
   export const commands: {
+    /** Only a host-authorized operation may invoke this handler. */
+    registerOperation<TArgs extends JsonValue, TResult extends JsonValue>(
+      id: string,
+      handler: (
+        args: TArgs,
+        context: OperationContext
+      ) => Promise<TResult> | TResult
+    ): void
     // biome-ignore lint/suspicious/noConfusingVoidType: void is intentional — handlers may return void
     register<TArgs extends JsonValue, TResult extends JsonValue | void>(
       id: string,

@@ -10,14 +10,23 @@ const TEMPLATES = path.resolve(
   '../../templates'
 )
 
+export const templateNames = [
+  'basic-resolver',
+  'post-action',
+  'operation',
+] as const
+export type TemplateName = (typeof templateNames)[number]
+
 export interface InitOptions {
   projectName: string
-  template: 'basic-resolver' | 'post-action'
+  template: TemplateName
   destDir: string
   publisher: string
 }
 
-export async function init(opts: InitOptions): Promise<{ created: string }> {
+export async function init(
+  opts: InitOptions
+): Promise<{ created: string; notice?: string }> {
   const target = path.resolve(opts.destDir, opts.projectName)
   await mkdir(target, { recursive: true })
   const src = path.join(TEMPLATES, opts.template)
@@ -26,7 +35,15 @@ export async function init(opts: InitOptions): Promise<{ created: string }> {
     PUBLISHER: opts.publisher,
     PLUGIN_ID: `${opts.publisher}.${opts.projectName}`,
   })
-  return { created: target }
+  return {
+    created: target,
+    ...(opts.template === 'operation'
+      ? {
+          notice:
+            'Unreleased operation template: use matching development SDK packages and host. Read README.md before installing dependencies; published package versions do not establish operation support.',
+        }
+      : {}),
+  }
 }
 
 async function copyTree(

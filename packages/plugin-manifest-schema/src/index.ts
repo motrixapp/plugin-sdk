@@ -12,5 +12,7 @@
 // Keep this file a pure re-export barrel; anything else belongs in one of the
 // two modules above.
 
+export * from './operation-ui'
+export * from './operations'
 export * from './schema'
 export * from './validate'

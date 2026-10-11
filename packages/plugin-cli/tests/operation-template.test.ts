@@ -102,6 +102,10 @@ describe('operation template', () => {
     const pkg = JSON.parse(
       readFileSync(path.join(project, 'package.json'), 'utf8')
     )
+    expect(pkg.devDependencies).toMatchObject({
+      '@motrix/plugin-api': '^2.2.0',
+      '@motrix/plugin-cli': '^2.2.0',
+    })
     expect(pkg.scripts.typecheck).toBe('tsc --noEmit')
     expect(pkg.scripts.validate).toBe('motrix-plugin validate')
     expect(pkg.scripts.lint).toBe('motrix-plugin lint')

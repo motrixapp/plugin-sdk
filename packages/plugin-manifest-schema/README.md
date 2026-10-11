@@ -80,10 +80,13 @@ the codes the host emits at install time.
 This module performs no I/O and imports no Node built-ins, so it runs anywhere
 the schema does.
 
+## Plugin operations (unreleased)
+
+`OperationsContributionSchema`, `OperationDefinitionSchema`, `OperationUiSchema`, `OperationDefinition`, `OperationLayout` and the operation validation helpers describe the development operations protocol. `ManifestSchema` enforces the cross-field operation rules; standalone structural parsers do not replace full manifest validation. This remains the only protocol definition, shared by host and CLI.
+
+See the [English guide](../../docs/operations.md) or [Chinese guide](../../docs/operations.zh-CN.md), including complete media and text examples, supported controls, limits and compatibility requirements. The examples target Motrix beta.48 or later (below 3.0.0), contingent on that release shipping the required features; this is not a claim of published support.
+
 ## Learn more
 
 - Scaffold a manifest with [`@motrix/plugin-cli`](https://www.npmjs.com/package/@motrix/plugin-cli)
   (`motrix-plugin init`)
-- Design background: `docs/superpowers/specs/2026-04-10-plugin-system-design.md`
-  and `docs/superpowers/plans/2026-05-16-extract-plugin-manifest-schema-package.md`
-  in the [motrix-turbo](https://gitlab.com/agalwood/motrix-turbo) repository

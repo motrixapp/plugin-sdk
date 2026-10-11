@@ -1,5 +1,10 @@
 // packages/plugin-manifest-schema/src/index.ts
 import { z } from 'zod'
+import {
+  boundedOperationJson,
+  OperationsContributionSchema,
+  operationManifestIssues,
+} from './operations'
 
 export const RESERVED_PUBLISHERS = new Set([
   'motrix',
@@ -165,8 +170,14 @@ function maxPropsAtAnyLevel(s: BoundedJsonSchemaShape): number {
  * check runs only at the top-level invocation so nested recursion does not
  * re-compute the same trees.
  */
-export const BoundedJsonSchemaTopLevel = BoundedJsonSchema.superRefine(
-  (schema, ctx) => {
+export const BoundedJsonSchemaTopLevel = z
+  .unknown()
+  .refine(
+    (value) => boundedOperationJson(value, 8192, 18),
+    'plugin.manifest.bounded_schema_invalid: structural limit'
+  )
+  .pipe(BoundedJsonSchema)
+  .superRefine((schema, ctx) => {
     const serialized = JSON.stringify(schema)
     if (serialized.length > BOUNDED_SCHEMA_MAX_BYTES) {
       ctx.addIssue({
@@ -195,8 +206,7 @@ export const BoundedJsonSchemaTopLevel = BoundedJsonSchema.superRefine(
         message: `plugin.manifest.bounded_schema_invalid: ${props} properties at one level exceeds ${BOUNDED_SCHEMA_MAX_PROPS_PER_LEVEL}`,
       })
     }
-  }
-)
+  })
 
 const CommandContributionSchema = z
   .object({
@@ -204,6 +214,7 @@ const CommandContributionSchema = z
     title: z.string().min(1).max(128),
     icon: z.string().max(64).optional(),
     public: z.boolean().default(false),
+    execution: z.literal('operation').optional(),
     argsSchema: BoundedJsonSchemaTopLevel.optional(),
     resultSchema: BoundedJsonSchemaTopLevel.optional(),
   })
@@ -277,10 +288,11 @@ const ContributesSchema = z
     commands: CommandsContribution.optional(),
     hooks: HookContributionSchema.optional(),
     configuration: ConfigurationContributionSchema.optional(),
+    operations: OperationsContributionSchema.optional(),
   })
   .passthrough()
 
-export const ManifestSchema = z
+const ManifestStructureSchema = z
   .object({
     $schema: z.string().optional(),
     manifestVersion: z.literal(1),
@@ -339,5 +351,11 @@ export const ManifestSchema = z
   })
   .strict()
 
-export type ManifestZodOutput = z.infer<typeof ManifestSchema>
+export type ManifestZodOutput = z.infer<typeof ManifestStructureSchema>
+export const ManifestSchema = ManifestStructureSchema.superRefine(
+  (manifest, context) => {
+    for (const message of operationManifestIssues(manifest))
+      context.addIssue({ code: 'custom', message })
+  }
+)
 export type CommandContribution = z.infer<typeof CommandContributionSchema>

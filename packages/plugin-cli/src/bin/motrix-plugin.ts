@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 import { Command, Option } from 'commander'
 import { dev } from '../commands/dev'
-import { init } from '../commands/init'
+import { init, type TemplateName, templateNames } from '../commands/init'
 import { lint } from '../commands/lint'
 import { pack } from '../commands/pack'
 import { validate } from '../commands/validate'
@@ -16,7 +16,7 @@ program
   .command('init <name>')
   .addOption(
     new Option('-t, --template <id>', 'template')
-      .choices(['basic-resolver', 'post-action'])
+      .choices(templateNames)
       .default('basic-resolver')
   )
   .option('-p, --publisher <pub>', 'publisher name', 'me')
@@ -24,7 +24,7 @@ program
     async (
       name: string,
       opts: {
-        template: 'basic-resolver' | 'post-action'
+        template: TemplateName
         publisher: string
       }
     ) => {
@@ -35,6 +35,7 @@ program
         publisher: opts.publisher,
       })
       console.log(`Created ${r.created}`)
+      if (r.notice) console.log(r.notice)
     }
   )
 

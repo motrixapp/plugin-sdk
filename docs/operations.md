@@ -1,0 +1,509 @@
+# Authoring plugin operations (unreleased)
+
+**English** | [简体中文](./operations.zh-CN.md)
+
+> Development implementation, not a released SDK/host contract. Use a matching
+> development checkout of the SDK and a Motrix build that implements the required
+> capabilities. Examples and the operation template require
+> `>=2.0.0-beta.48 <3.0.0`; beta.48 is the planned first supporting host release,
+> not a claim that these features have shipped. Beta.47 is rejected, including
+> development builds still reporting that version. Matching SDK packages remain
+> unpublished, and a public JSON Schema URL does not establish support. The
+> examples are not marketplace releases.
+
+## Start with a complete example
+
+- [Text deduplication](../examples/text-tools/README.md): one input, a boolean
+  option in a collapsible group, one output and a result count. Start here.
+- [Media merge](../examples/media-merge/README.md): two file cards, a two-column
+  grid, an inline MP4/MKV selector, platform-specific hints and automatic input
+  order detection. This SDK adaptation uses `example.media-merge`, not the
+  reserved official identity `motrix.media-merge`.
+
+Both directories contain the full manifest, handler, English and Chinese locale
+files, and a TypeScript configuration. These are executable source examples,
+not abbreviated snippets. The snippets below illustrate individual fields and
+are not complete manifests.
+
+For a TypeScript author, adapting an example is a small task; defining a new
+operation from scratch has a moderate learning cost. The main work is aligning
+schema fields, UI references, locale keys and file grants. No React or CSS is
+needed. This is a source-based assessment, not a measured usability study.
+The development CLI provides an `operation` template that creates the initial
+references and files for you. `basic-resolver` and `post-action` remain lifecycle-hook
+templates. Types are still handwritten; schema-to-TypeScript generation and UI
+preview are not implemented.
+
+### Generate your own operation project
+
+The development CLI now includes `operation`, starting from text deduplication.
+From the SDK repository root, choose an unused project name:
+
+```sh
+pnpm install --frozen-lockfile
+pnpm build
+node packages/plugin-cli/dist/bin/motrix-plugin.js init my-operation -t operation -p acme
+cd my-operation
+pnpm add -D @motrix/plugin-api@file:../packages/plugin-api @motrix/plugin-cli@file:../packages/plugin-cli
+pnpm run typecheck
+pnpm run validate
+pnpm run pack
+pnpm run lint
+```
+
+This local dependency step is necessary while the operation API/CLI are
+unreleased. The generated version ranges do not imply published support. If you
+create the project elsewhere, adjust the two `file:` paths to the matching built
+SDK packages. Do not change the host's schema or permissions to install it.
+
+Alternatively, from the SDK root, the create wrapper supports:
+
+```sh
+node packages/create-motrix-plugin/bin/create.mjs my-operation operation
+```
+
+It defaults to publisher `me`; use the full CLI's `-p` option for a custom one.
+Once matching versions are released, the public entry points will be
+`motrix-plugin init my-operation -t operation -p acme` and
+`pnpm create motrix-plugin my-operation operation`. They are not a claim that
+currently published packages contain the template.
+
+The generator creates the complete manifest, handler, English/Chinese locales,
+strict package-based `tsconfig.json`, esbuild config, package scripts, `.gitignore`
+and paired READMEs. The project has its own publisher/name substitutions in the
+operation/command/activation IDs. It requests only selected-file read/write,
+includes both plugin-page and one-task menu entries, and uses `preserve-inputs`.
+`typecheck`, `validate`, `pack` and `lint` are explicit scripts; `pack` does not
+replace type checking. Handler types remain handwritten. No plugin is installed,
+started, signed or published by scaffolding.
+
+### Run the examples from this SDK checkout
+
+Use Node.js 20 or newer and the pnpm version declared by this repository. From
+the repository root:
+
+```sh
+pnpm install --frozen-lockfile
+pnpm build
+pnpm --filter @motrix/plugin-api exec tsc --noEmit -p ../../examples/text-tools/tsconfig.json
+cd examples/text-tools
+node ../../packages/plugin-cli/dist/bin/motrix-plugin.js validate
+node ../../packages/plugin-cli/dist/bin/motrix-plugin.js pack
+node ../../packages/plugin-cli/dist/bin/motrix-plugin.js lint
+```
+
+Replace `text-tools` with `media-merge` to run the other example. `pack` bundles
+`src/index.ts` itself and writes an unsigned `.moext` under that example's
+ignored `dist/` directory. `lint` reads the bundle, so run it **after** `pack`.
+Neither command publishes or signs anything. Install through the compatible
+host's normal third-party package flow and review the requested permissions.
+
+The examples deliberately use this checkout's CLI and ambient API declaration;
+there is no separate example dependency installation. Installing the currently
+published npm packages is not a substitute for building these development
+sources. When moving an example into a standalone project, use matching released
+CLI/API packages once available, and replace the relative ambient declaration
+include with the package's `types` setup. Keep `motrix:plugin-api` external when
+bundling. `pack` validates and bundles; it does not replace TypeScript checking.
+
+## Ownership and files
+
+An operation is a host-rendered form connected to a sandbox handler:
+
+```text
+manifest → host form → user file authorization → host job → sandbox handler
+                                                       → validate and save result
+```
+
+| Authoring surface | Responsibility |
+|---|---|
+| `commands[].argsSchema` / `resultSchema` | Data types, required keys, defaults, bounds and return values |
+| `operations.items[].fields` | Labels, widgets, help and presentation conditions |
+| `operations.items[].files` | Input/output roles, text/media use and filename suggestions |
+| `operations.items[].ui` | Layout, action labels and repeat policy |
+| `operations.items[].entries` | Plugin detail and task menu entry points |
+| `operations.items[].result` / `errors` | Displayed results and localized business errors |
+| `commands.registerOperation()` | Business logic inside the existing sandbox |
+| `locales/*.json` | Plugin-owned UI text |
+
+The host owns components, loading Skeletons, keyboard/focus behavior, progress,
+cancellation, resource limits, file authorization and final output publication.
+Plugins do not supply renderer JavaScript, HTML, CSS, DOM access or React.
+Persistent settings still belong in `contributes.configuration` and the `config`
+API. Operation arguments are per-invocation form values, not saved preferences.
+
+## Declare an operation and its command
+
+`contributes.operations` has `{ "version": 1, "items": [...] }`. Each item has
+an `id`, `title`, `command`, `fields` and `entries`. It may also declare
+`description`, `icon`, `requires`, `files`, `ui`, `result` and `errors`.
+Operation and handler IDs must start with the plugin ID followed by a dot.
+The handler must be a declared command with `execution: "operation"` and must
+not be public; explicitly use `public: false`. Register it with
+`commands.registerOperation`, and declare its `onCommand:<command-id>` activation
+event. Ordinary `commands.execute` and cross-plugin invocation cannot manufacture
+an operation context or invoke the privileged handler.
+
+Operation icons are `action`, `media-merge`, `document` and `checksum`.
+The current host advertises these feature identifiers:
+
+| Feature | Meaning |
+|---|---|
+| `operations.v1` | Operation descriptors and execution |
+| `operations.ui.v1` | Composable layout and presentation |
+| `files.selected.v1` | Selected-file references |
+| `files.text.v1` | Scoped UTF-8 text read/write |
+| `media.merge-streams.v1` | Scoped media probing and stream merging |
+
+List required features in `requires`. A custom `ui` requires
+`operations.ui.v1`; unknown required features make the operation unavailable.
+Feature declarations are not permissions and do not authorize files.
+
+### Data schemas
+
+Both schemas must be flat objects with `additionalProperties: false`, at most
+24 properties, and only `string`, `boolean`, `number` or `integer` values.
+Nested objects, arrays, patterns and general JSON Schema composition are not
+supported. Non-enum strings need an explicit `maxLength` no greater than 4096;
+numbers/integers need `minimum` and `maximum`. Only string enums are supported,
+with at most 64 unique values. Defaults must validate against the same schema.
+
+For example, the format parameter is defined once in `argsSchema.properties`:
+
+```json
+{
+  "format": {
+    "type": "string",
+    "enum": ["mp4", "mkv"],
+    "default": "mp4"
+  }
+}
+```
+
+Put `format` in `argsSchema.required` when it is required. UI fields only refer
+to it; they do not redefine its type or enum. Labels fall back from `field.label`
+to the schema property's `title`, then to the key. Use `field.help` for visible
+help; a schema `description` is not automatically rendered as field help.
+TypeScript handler generics are handwritten today: keep them aligned with the
+schemas. The host validates arguments again at execution and validates results;
+renderer validation is not an authority boundary.
+
+## Fields and widgets
+
+Every argument must have exactly one `fields` entry. `field` is its parameter
+key; the supported widget names are `text`, `textarea`, `number`, `switch`,
+`select` and `segmented`. The widget must match the schema type.
+
+| Schema/binding | Default control | Optional presentation |
+|---|---|---|
+| String | Text input | `textarea` |
+| Number/integer | Numeric input | Bounds from the schema; integers use step 1 |
+| Boolean | Switch | No alternative boolean control |
+| String enum | Select | `segmented` for a single-choice segmented control |
+| Input file binding | File card | Preset icon/tone and desktop drop affordance |
+| Output file binding | Save-location card | Inline scalar accessory through layout |
+
+```json
+{
+  "field": "format",
+  "label": "%format%",
+  "widget": "segmented",
+  "optionLabels": { "mp4": "MP4", "mkv": "MKV" }
+}
+```
+
+`optionLabels` changes displayed labels, not submitted values. Unmapped enum
+values display literally. Required state comes from `argsSchema.required`;
+the host currently provides accessible required descriptions without a visible
+asterisk. Controls and execution validation remain host-owned.
+
+`appearance` accepts `placeholder`, `browseLabel`, `drop`, `icon` and `tone`:
+
+- `placeholder` is used by text/number/textarea inputs and empty file cards.
+- `browseLabel` currently sets the file card's accessible name, not its visible
+  action text. The host supplies localized choose/change/drop instructions.
+- `help` supplies extra explanation. A selected file's directory takes priority
+  over file help in the card. Avoid repeating the host's action hint in help or
+  placeholder text.
+- File icons: `video`, `audio`, `folder`, `document`, `text`, `checksum`.
+- File tones: `neutral`, `blue`, `violet`, `amber`; they are host presets.
+- `drop: true` is valid only for input files. Actual support and authorization
+  depend on the host; it does not enable browser-local uploads.
+
+File fields cannot have `widget`, `optionLabels`, `visibleWhen` or `enabledWhen`.
+Icons, tones and browse labels are file-only. No arbitrary style, image URL,
+class name, event handler or HTML is accepted.
+
+## Compose the layout
+
+Without `ui`, fields render vertically in their declared order. When `ui` is
+present, `ui.layout` is required. Every field must be bound exactly once across
+`field` nodes and accessories, with no omitted or duplicated references.
+
+| Node | Properties and behavior |
+|---|---|
+| `field` | `field`, optional `span: 1\|2`, optional scalar `accessory` in the label row |
+| `text` | Plain `text`, optional `tone: muted\|info`, `platform: desktop\|web`, `span` |
+| `stack` | `children`, optional `title` and `span`; vertical order |
+| `grid` | `children`, optional `columns: 1\|2`, `title`, `span`; narrow layouts collapse to one column |
+| `group` | `children`, optional `title`, `collapsible`, `span`; bordered group |
+
+The media example uses:
+
+```json
+{
+  "type": "grid",
+  "columns": 2,
+  "children": [
+    { "type": "field", "field": "videoInput" },
+    { "type": "field", "field": "audioInput" },
+    { "type": "field", "field": "output", "span": 2, "accessory": "format" }
+  ]
+}
+```
+
+A file cannot be an accessory, and an input file cannot contain an accessory.
+Collapsible groups require a title, default to expanded, and cannot contain
+files even through nested containers. There is no configurable default-open
+state. `columns` is valid only on a grid. Platform filtering applies only to
+text nodes. Text is static plain text, without Markdown, HTML or interpolation
+of form/result values.
+
+`ui.submitLabel`, `repeatLabel` and `footer` customize the primary action, repeat
+action and footer. Cancel, job status, progress and result containers belong to
+the host. Extra action buttons and custom success/failure layouts are unsupported.
+
+### Conditions
+
+Scalar fields can use `visibleWhen` and `enabledWhen`. Conditions support
+`{ field, equals }`, `{ field, in: [...] }`, `{ all: [...] }`, `{ any: [...] }`
+and `{ not: ... }`, with strict scalar equality:
+
+```json
+{
+  "visibleWhen": { "field": "mode", "equals": "replace" },
+  "enabledWhen": { "not": { "field": "readOnly", "equals": true } }
+}
+```
+
+The referenced fields and values must be valid in the argument schema. Conditions
+cannot reference file fields. A conditional required field needs a valid default.
+Hidden/disabled fields retain their values and are still validated/submitted;
+conditions do not implement conditional requiredness, clear values or grant
+permission. Enforce business rules in the handler too. There are no expressions,
+callbacks, computed defaults, dynamic options or asynchronous field validators.
+
+## Selected files and permission boundaries
+
+A file parameter is a required bounded string in the argument schema, without
+a default or enum, with `maxLength <= 128`. Current examples constrain it to 36
+characters. Treat it as an **opaque invocation reference**, never a path or a
+value to synthesize, parse, persist or reuse across jobs.
+
+```json
+{
+  "input": { "kind": "input-file", "use": "text", "extensions": ["txt"] },
+  "output": {
+    "kind": "output-file",
+    "use": "text",
+    "extensions": ["txt"],
+    "suggestedName": { "stemFrom": "input", "suffix": "-unique" }
+  }
+}
+```
+
+`use` is `text` or `media`. Request `files.selected.read` for inputs and
+`files.selected.write` for outputs; media bindings additionally require `ffmpeg`.
+An output needs `extensions` or `extensionFrom`. Extensions are lowercase,
+without a dot. `extensionFrom` refers to a string enum such as `format`.
+`suggestedName.stemFrom` refers to an input; its suffix permits up to 32 ASCII
+letters, digits, underscores or hyphens. Suggestions do not grant write access:
+if necessary, submitting opens the save chooser before execution.
+
+Electron uses native open/save dialogs. Desktop drops are confirmed by the host.
+Web uses server-side file selection within its directory policy; files on the
+browser's computer are not uploaded. Task-menu entry binds host-validated task
+files. A plugin-provided path is none of these authorization sources.
+
+The host binds grants to the owner, plugin, operation and invocation/policy
+revision. Drafts expire after 15 minutes; refreshing a form does not extend them.
+Repeated execution creates fresh references. Host checks include resolved-path
+policy, file identity/change checks and execution-time authorization. It snapshots
+inputs and owns temporary output, cancellation cleanup, validation and atomic
+non-overwriting publication. Existing outputs are rejected. Unsupported filesystems
+are rejected rather than weakening publication guarantees. Successful outputs
+are not deleted by resetting the form. The official publisher gets no exemption.
+
+Media probing/merging permits supported standalone containers; playlists, concat
+scripts, image sequences, network protocols and indirect file access are not an
+escape hatch. There is no arbitrary FFmpeg argument API in `OperationContext`.
+
+## Handler, progress, errors and results
+
+Register once at module scope; perform work only inside the handler. The complete
+handlers are in the example source files. The operation context supplies:
+
+| API | Contract |
+|---|---|
+| `jobId` | Job identity, useful in plugin logs |
+| `signal` | `aborted`, `reason`, `throwIfAborted`, abort listener add/remove; a bounded sandbox subset of `AbortSignal` |
+| `progress({ phase, fraction? })` | Async progress report; `phase` is `preparing` or `running`, fraction convention is 0–1 |
+| `fail(code)` | Throw a stable business error mapped by the operation's `errors` |
+| `files.readText(ref)` | Read a scoped UTF-8 input |
+| `files.writeText(ref, content)` | Write a scoped new text output |
+| `media.probe(ref)` | Return bounded stream metadata and optional duration |
+| `media.mergeStreams({ video, audio, output, format, expectedDurationMs? })` | Merge streams using scoped refs; format is MP4 or MKV |
+
+Await capability calls, check cancellation during work, and do not catch a
+cancellation just to return success. Host cancellation also revokes capabilities
+and stops/cleans host-owned work if the handler fails to cooperate.
+
+The host owns job stages: accepted → preparing → running → validating → committing
+→ cleaning → succeeded/failed/cancelled. Cancellation can introduce `cancelling`;
+a host restart marks unfinished jobs `interrupted` and does not replay them.
+Closing a form alone does not cancel a job. Final publication is a commit boundary:
+a late cancellation cannot remove an already published result.
+
+Progress `phase` currently does not override the host's stage label. There is no
+custom progress message. Reports are limited to 20 calls per second; send fewer.
+The host coalesces updates, displays reported progress at most as 99%, and owns
+100% after successful publication. Media merge progress is forwarded automatically.
+
+Declare errors as `{ "invalidInput": "%invalidInput%" }`, then call
+`context.fail('invalidInput')`. Unmapped thrown messages use the host's generic
+failure text; do not rely on raw exception strings reaching the user.
+
+`result.fields` selects scalar return keys to display as `title: value`; titles
+come from `resultSchema.properties[key].title`. `result.files` selects the output
+binding, which must also be declared in the result schema. Return the granted
+output ref, not its path. Every declared output must be included in `result.files`.
+The host validates the result and output before publishing. Desktop shows an
+open-folder action; Web does not expose a desktop folder action. Custom result
+cards, tables and result-value formatters are not implemented.
+
+### Repeat and refresh
+
+| `ui.repeat` | Scalar options | Inputs | Output |
+|---|---|---|---|
+| Omitted or `reset` | Schema defaults | Clear | Clear |
+| `preserve-options` | Preserve | Clear | Clear |
+| `preserve-inputs` | Preserve | Revalidate and reauthorize unchanged files | Clear |
+
+Media merge uses `preserve-options`: **Merge another file** clears both inputs
+and the output, retaining MP4/MKV. Text deduplication uses `preserve-inputs`.
+Previous task bindings are not automatically applied again on repeat.
+
+Ordinary navigation preserves form state in the renderer. Refresh can resume a
+valid host draft without extending its authorization deadline. Running jobs are
+host-owned. Historical completed jobs are not restored as a new form's current
+result after restart. Plugin installation/update reloads descriptors and invalidates
+obsolete form/grant state; compatible plugin updates do not require an app restart.
+Language changes update labels without invalidating the current form or job.
+
+## Entry points
+
+`entries` supports `plugin-detail` and `task-menu`, at most once each. The detail
+page shows one operation directly or a selector for multiple operations.
+A task menu declaration can bind selected tasks to input fields:
+
+```json
+{
+  "surface": "task-menu",
+  "selection": {
+    "count": { "min": 1, "max": 1 },
+    "every": { "status": "completed", "files": "single", "local": true }
+  },
+  "bind": { "input": { "source": "task-file", "index": 0 } }
+}
+```
+
+Task selection is currently limited to 1–4 completed single-file tasks with local
+final files. Bind indexes must exist even at the minimum selection count. There
+are no arbitrary task predicates or script-driven menu labels. Inapplicable task
+selections omit the item. Disabled plugins, missing required capabilities,
+security restrictions and missing FFmpeg show the appropriate unavailable state.
+The host rechecks eligibility at preparation/execution, not only when drawing a
+menu. Both surfaces invoke the same form and handler.
+
+## Localization and accessibility
+
+Set `l10n: "locales"`; use a whole-field `%key%` reference. `en-US.json` is required
+when localization is declared; other languages can be partial and fall back to
+English. Mixed text such as `"Choose %input%"` is invalid: translate the full
+sentence under one key. IDs, parameter names and enum values are not translated.
+
+Operations resolve titles/descriptions, field labels/help, appearance text,
+option labels, group titles, static text, action/footer labels, error messages and
+schema titles/descriptions. The host language controls rendering. Generic status,
+cancel and file-action text comes from the host's language resources.
+Translated descriptors are bounded too; a short `%key%` is not a way around size
+limits. CLI coverage checks English references, not translation quality or visual
+fit in every locale. Check both example languages in the host.
+
+Labels and help connect to host controls; required descriptions, status live
+regions and keyboard behavior come from those controls. Give every field a useful
+label, including accessories whose visible label is compacted away. A custom
+`browseLabel` should describe the file selection purpose. Do not use icon or tone
+alone to convey meaning.
+
+## Limits and unsupported features
+
+These are current implementation limits, not promises that every plugin can
+consume every resource simultaneously.
+
+| Surface | Current limit |
+|---|---|
+| Operations per plugin | 16 |
+| Fields per operation / properties per data schema | 24 |
+| Input/output files | 4 inputs, 1 output; all file fields required |
+| Layout | 64 nodes, depth 4, at most 24 children per container |
+| Conditions | 64 nodes total per operation, depth 4; `all`/`any` up to 8 children, `in` up to 64 values |
+| Descriptor validation budget | 8 KiB per operation, 64 KiB for the contribution; conservative structural accounting, not raw manifest file size |
+| General schema budget | 8 KiB per argument/result schema, also subject to the bounded schema validator |
+| Text capability | UTF-8; 1 MiB input/output, at most 4 reads and one write per output |
+| Media capability | 8 GiB per input, 16 GiB combined; at most 4 probes, 2 simultaneous probes, 1 merge |
+| Host operation deadline | Media operations: 1 hour; other operations: 60 seconds; sandbox/resource limits can stop work earlier |
+| Draft quota | 4 per owner, 16 globally; same valid draft is reused on refresh |
+
+File snapshots/staging also need free disk space. Limits cannot be increased by
+adding fields to a manifest. The host may report resource or disk-space limits
+before a handler starts.
+
+Not implemented: custom HTML/JS/CSS components, arbitrary images/styles, dynamic
+options or async field validation, computed values, array/object editors, tables,
+trees, multi-step wizards, arbitrary extra buttons, rich result layouts, directory
+selection, multi-file array fields or browser-local uploads. Use separate small
+operations when appropriate; requirements outside this component/capability set
+need a protocol/host change, not an undocumented escape hatch.
+
+## Compatibility and troubleshooting
+
+UI text/layout/options and handler changes within this protocol can ship in a
+plugin update. New widgets, layout nodes, condition operators, capabilities or
+result renderers require SDK schema/API/CLI and host support. `operations.version`
+selects the protocol, `requires` checks features on a capable host, and
+`engines.motrix` sets the actual minimum supported host version. An older host may
+reject an unknown manifest at installation rather than show an unavailable form.
+
+The current engine floor targets beta.48. Before any release, verify that beta.48
+actually ships these capabilities; if it does not, raise the floor to the first
+release that does. Use matching SDK/CLI packages, and keep package and registry
+compatibility/permission metadata consistent. The CLI embeds its schema at build
+time: updating a separate schema dependency does not update an old CLI. The
+public schema URL can also lag this development implementation. Official package
+signing remains in the official plugin repository; these examples are unsigned.
+
+| Symptom | Check |
+|---|---|
+| Manifest fails schema validation | Matching host/CLI; private `execution: operation` handler; flat bounded schemas; required features |
+| Layout rejected | Every field exactly once, including accessories; topology and depth limits |
+| Conditional field rejected | Referenced scalar/value exists; a conditional required field has a default |
+| File binding rejected | Required string without default/enum, permissions, output extension and returned output |
+| `%key%` or English unexpectedly appears | `l10n`, English coverage, current language key and whole-field references |
+| File action text appears twice | Remove duplicated host instructions from `help`/`placeholder`; `browseLabel` is an accessible name |
+| `resourceLimit` | Progress frequency, read/probe counts, file size, concurrent drafts and free disk space |
+| New output rejected | Choose a nonexistent destination; never disable overwrite protection |
+
+Use the complete examples as the starting point. Their README files include
+expected behavior and manual checks for Electron/Web, localization, cancellation
+and file authorization. Passing CLI validation alone does not prove those flows.

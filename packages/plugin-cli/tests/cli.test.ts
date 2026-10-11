@@ -117,4 +117,65 @@ describe('motrix-plugin CLI', () => {
     const manifest = JSON.parse(await readFile(manifestPath, 'utf8'))
     expect(manifest.id).toBe('alice.demo')
   })
+
+  it.each([
+    {
+      bin: BIN,
+      args: ['init', 'text-demo', '-t', 'operation', '-p', 'alice'],
+      id: 'alice.text-demo',
+    },
+    {
+      bin: path.join(path.dirname(BIN), 'create-motrix-plugin.js'),
+      args: ['text-demo', 'operation'],
+      id: 'me.text-demo',
+    },
+    {
+      bin: path.join(
+        worktreeRoot,
+        'packages/create-motrix-plugin/bin/create.mjs'
+      ),
+      args: ['text-demo', 'operation'],
+      id: 'me.text-demo',
+    },
+  ])('scaffolds operation through $bin', async ({ bin, args, id }) => {
+    const tmpDir = mkdtempSync(path.join(os.tmpdir(), 'cli-operation-'))
+    try {
+      const stdout = execFileSync(process.execPath, [bin, ...args], {
+        cwd: tmpDir,
+        encoding: 'utf8',
+      })
+      expect(stdout).toContain('Unreleased operation template')
+      const project = path.join(tmpDir, 'text-demo')
+      const manifest = JSON.parse(
+        await readFile(path.join(project, 'motrix-plugin.json'), 'utf8')
+      )
+      expect(manifest.id).toBe(id)
+      expect(manifest.contributes.operations.items[0].command).toBe(
+        `${id}.deduplicate`
+      )
+      expect(existsSync(path.join(project, 'README.zh-CN.md'))).toBe(true)
+      expect(
+        execFileSync(process.execPath, [BIN, 'validate'], {
+          cwd: project,
+          encoding: 'utf8',
+        })
+      ).toContain('manifest OK')
+    } finally {
+      rmSync(tmpDir, { recursive: true, force: true })
+    }
+  })
+
+  it('lists operation in template help and rejects unknown template names', () => {
+    expect(
+      execFileSync(process.execPath, [BIN, 'init', '--help'], {
+        encoding: 'utf8',
+      })
+    ).toContain('operation')
+    const creator = path.join(path.dirname(BIN), 'create-motrix-plugin.js')
+    expect(() =>
+      execFileSync(process.execPath, [creator, 'demo', 'unknown-template'], {
+        stdio: 'pipe',
+      })
+    ).toThrow(/Available: basic-resolver, post-action, operation/)
+  })
 })

@@ -19,10 +19,12 @@ pnpm dlx @motrix/plugin-cli init my-plugin
 ## Commands
 
 ```bash
-motrix-plugin init <name> [-t basic-resolver|post-action] [-p <publisher>]
+motrix-plugin init <name> [-t basic-resolver|post-action|operation] [-p <publisher>]
 ```
-Scaffold a new plugin project from a template (`basic-resolver` or
-`post-action`) into `./<name>`.
+Scaffold a new plugin project from `basic-resolver`, `post-action` or the
+**unreleased** `operation` template into `./<name>`. `operation` starts with text
+deduplication, a host-rendered form, a private handler, both locales, strict type
+checking and paired READMEs. Use the operations guide for matching local SDK setup.
 
 ```bash
 motrix-plugin dev
@@ -98,9 +100,13 @@ pnpm create motrix-plugin my-plugin [template]
 Equivalent to `motrix-plugin init`, usable without a prior install via the
 `create-*` npm convention.
 
+## Plugin operations (unreleased)
+
+The development CLI validates and packs operation manifests using its embedded development schema. Use `init <name> -t operation [-p publisher]` or `create-motrix-plugin <name> operation` to generate a complete text-operation project. Build this checkout and follow the guide's local dependency setup; installing a published CLI with an older embedded schema is insufficient. Run `validate`, then `pack`, then `lint` (which reads the bundle), with TypeScript checking separately.
+
+See the [English guide](../../docs/operations.md) or [Chinese guide](../../docs/operations.zh-CN.md), including complete media and text examples, supported controls, limits and compatibility requirements. The examples target Motrix beta.48 or later (below 3.0.0), contingent on that release shipping the required features; this is not a claim of published support.
+
 ## Learn more
 
 - Manifest shape reference: [`@motrix/plugin-manifest-schema`](https://www.npmjs.com/package/@motrix/plugin-manifest-schema)
 - Plugin runtime types: [`@motrix/plugin-api`](https://www.npmjs.com/package/@motrix/plugin-api)
-- Design background: `docs/superpowers/specs/2026-05-09-plugin-ecosystem-design.md`
-  in the [motrix-turbo](https://gitlab.com/agalwood/motrix-turbo) repository

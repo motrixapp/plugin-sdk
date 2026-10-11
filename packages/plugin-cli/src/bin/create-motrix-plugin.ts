@@ -1,22 +1,20 @@
 #!/usr/bin/env node
-import { init } from '../commands/init'
-
-const validTemplates = ['basic-resolver', 'post-action'] as const
-type Template = (typeof validTemplates)[number]
+import { init, type TemplateName, templateNames } from '../commands/init'
 
 const [name = 'my-plugin', rawTemplate = 'basic-resolver'] =
   process.argv.slice(2)
-if (!validTemplates.includes(rawTemplate as Template)) {
+if (!templateNames.includes(rawTemplate as TemplateName)) {
   console.error(
-    `Unknown template: ${rawTemplate}. Available: ${validTemplates.join(', ')}`
+    `Unknown template: ${rawTemplate}. Available: ${templateNames.join(', ')}`
   )
   process.exit(1)
 }
-const template = rawTemplate as Template
-await init({
+const template = rawTemplate as TemplateName
+const result = await init({
   projectName: name,
   template,
   destDir: process.cwd(),
   publisher: 'me',
 })
 console.log('Created', name)
+if (result.notice) console.log(result.notice)

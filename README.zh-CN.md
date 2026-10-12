@@ -28,11 +28,11 @@ pnpm run pack # produce a distributable .moext
 里 —— 没有 Node.js API,不能直接访问文件或网络。与外界的一切交互都要
 经过你在 manifest 里声明的 capability,用户在安装时能看到你申请了什么。
 
-## 插件操作（尚未发布）
+## 插件操作（SDK 2.2.0+）
 
-开发中的操作协议允许插件声明宿主渲染的表单、入口和沙箱处理函数，无需编写 React 或 renderer 代码。先阅读 [编写指南](docs/operations.zh-CN.md)，再参考完整的 [文本去重](examples/text-tools/README.zh-CN.md) 和 [音视频合并](examples/media-merge/README.zh-CN.md) 示例。
+操作协议允许插件声明宿主渲染的表单、入口和沙箱处理函数，无需编写 React 或 renderer 代码。先阅读 [编写指南](docs/operations.zh-CN.md)，再参考完整的 [文本去重](examples/text-tools/README.zh-CN.md) 和 [音视频合并](examples/media-merge/README.zh-CN.md) 示例。
 
-此接口**尚未发布**。请按指南使用匹配源码构建，不能直接使用上方已发布的脚手架流程；开发版 CLI 已包含 `operation` 模板，本地 SDK 依赖配置见指南。示例的引擎范围和包版本不能证明 beta.47 等已发布宿主支持。新组件和能力需要宿主支持；兼容协议范围内的插件界面和业务更新可以热生效。
+操作协议、API 和 CLI 模板已随 **SDK 2.2.0** 发布。运行仍需要兼容的 Motrix 宿主，beta.48 是计划中的首个支持版本，beta.47 不兼容；SDK 发布不代表宿主功能已发布。新组件和能力需要宿主支持；兼容协议范围内的插件界面和业务更新可以热生效。依赖安装方式见指南。
 
 ## 快速开始
 
@@ -47,7 +47,7 @@ pnpm create motrix-plugin my-plugin post-action  # template as second argument
 |---|---|
 | `basic-resolver`(默认) | 一个检查并改写下载的 `beforeCreate` hook(`site-resolver` category) |
 | `post-action` | 一个下载完成后发桌面通知的 `afterComplete` hook(`post-action` category) |
-| `operation`（尚未发布） | 文本去重表单、受限处理函数、中英文文案及 typecheck/validate/pack/lint 脚本 |
+| `operation`（SDK 2.2.0+） | 文本去重表单、受限处理函数、中英文文案及 typecheck/validate/pack/lint 脚本 |
 
 脚手架生成的插件 id 初始为 `me.<name>`。要设置真实的 publisher
 (`<publisher>.<name>` 的前缀),可以直接编辑 `motrix-plugin.json` 里的
@@ -142,7 +142,7 @@ pnpm 内置的 tarball 打包命令,而不是脚手架里的 script。)
 | `activationEvents` | host 何时加载你(如 `onTaskType:http`、`onStartup`)。必填。 |
 | `contributes.hooks` | 你实现了哪些生命周期 hook,每个都要带 `role`。 |
 | `contributes.commands` | 你注册的 command:id 形如 `<publisher>.<plugin>.<command>`,最多 64 个。标记 `public: true` 的 command 必须声明 `argsSchema` + `resultSchema`(受限的 JSON-Schema 子集 —— 不支持 `$ref`/`oneOf`,≤ 8 KiB,深度 ≤ 8)。 |
-| `contributes.operations` | **尚未发布：**宿主渲染的操作表单与受限处理函数，见 [操作指南](docs/operations.zh-CN.md)。 |
+| `contributes.operations` | **SDK 2.2.0+：**宿主渲染的操作表单与受限处理函数，见 [操作指南](docs/operations.zh-CN.md)。 |
 | `contributes.configuration` | 你的设置 schema(同一受限子集)。运行时通过 `config` capability 读取。 |
 | `requestedHeapMB` | 沙箱堆大小,32(默认)到 64。 |
 | `l10n` | locale JSON 文件所在目录。 |

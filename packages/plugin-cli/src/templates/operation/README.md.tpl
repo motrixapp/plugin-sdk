@@ -4,28 +4,25 @@
 
 A text deduplication operation scaffolded for `{{PLUGIN_ID}}`.
 
-> **Unreleased protocol and template.** Use a Motrix development build and SDK
-> packages that implement operations v1, composable UI and scoped text files.
-> The host range is `>=2.0.0-beta.48 <3.0.0`, targeting beta.48 as the first
-> supporting release. Beta.47 is rejected, including development builds still
-> reporting that version. This target and the dependency ranges do not establish
-> published support. Raise the host floor if these features ship after beta.48.
+> **Requires SDK 2.2.0+ and a compatible Motrix host.** The SDK operation
+> protocol and template are published. The host must implement operations v1,
+> composable UI and scoped text files. The host range is
+> `>=2.0.0-beta.48 <3.0.0`, targeting beta.48 as the first supporting release.
+> Beta.47 is rejected, including development builds reporting that version.
+> SDK publication does not establish host availability. Raise the host floor if
+> these features ship after beta.48.
 
-## Set up matching development dependencies
+## Install dependencies
 
-Build a matching plugin-sdk checkout first with `pnpm install --frozen-lockfile`
-and `pnpm build` in that checkout. If this project was created immediately inside
-that checkout's root, run the following **from this project directory**:
+From this project directory, install the published dependencies:
 
 ```sh
-pnpm add -D @motrix/plugin-api@file:../packages/plugin-api @motrix/plugin-cli@file:../packages/plugin-cli
+pnpm install
 ```
 
-If the project lives elsewhere, adjust both `file:` paths to the matching built
-SDK packages. Do not replace this step with a plain install of the older published
-API/CLI. The source checkout's schema is embedded in its CLI build. When matching
-SDK packages are released, replace these local dependencies with their actual
-released versions; no minimum published SDK package version is assigned here.
+The project declares API/CLI 2.2.0 or compatible newer versions. A local SDK
+checkout is unnecessary. Use matching local API/CLI dependencies only when
+testing SDK changes that are not yet released.
 
 ## Check and pack
 
@@ -89,6 +86,5 @@ The template requests no FFmpeg, network or unrestricted filesystem capability.
 
 For current controls, layout/condition rules, file grants, limits and unsupported
 features, read the [SDK operation guide](https://github.com/motrixapp/plugin-sdk/blob/main/docs/operations.md).
-Before these sources are published, read `docs/operations.md` in the matching SDK
-checkout instead. New UI nodes/capabilities need host support; the template does
+New UI nodes/capabilities need host support; the template does
 not provide custom renderer HTML, JavaScript or CSS.

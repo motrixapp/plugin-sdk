@@ -32,19 +32,19 @@ inside a sandbox — no Node.js APIs, no direct file or network access.
 Everything reaches the outside world through capabilities you declare in the
 manifest, and users see exactly what you asked for at install time.
 
-## Plugin operations (unreleased)
+## Plugin operations (SDK 2.2.0+)
 
-The development operations protocol lets a plugin declare a host-rendered form,
+The operations protocol lets a plugin declare a host-rendered form,
 entry points and a sandbox handler. No React or renderer code is required.
 Start with the [authoring guide](docs/operations.md), then the complete
 [text deduplication](examples/text-tools/README.md) and
 [media merge](examples/media-merge/README.md) examples.
 
-This interface is **not released**. Use the guide's matching-source build
-instructions, not the published scaffold above. The development CLI includes an `operation` template; see the guide for local
-SDK dependency setup. Example engine ranges and package versions do not establish support in
-an already released host, including beta.47. New components/capabilities require
-host support; compatible plugin-only UI and business changes can update live.
+The operation protocol, API and CLI template are available in **SDK 2.2.0**.
+They require a compatible Motrix host; beta.48 is the planned first supporting
+release, and beta.47 is incompatible. SDK publication does not establish host
+availability. New components/capabilities require host support; compatible
+plugin-only UI and business changes can update live. See the guide for setup.
 
 ## Quick start
 
@@ -59,7 +59,7 @@ Templates:
 |---|---|
 | `basic-resolver` (default) | A `beforeCreate` hook that inspects and rewrites downloads (`site-resolver` category) |
 | `post-action` | An `afterComplete` hook that fires a desktop notification (`post-action` category) |
-| `operation` (unreleased) | A text deduplication form, scoped handler, both locales and typecheck/validate/pack/lint scripts |
+| `operation` (SDK 2.2.0+) | A text deduplication form, scoped handler, both locales and typecheck/validate/pack/lint scripts |
 
 The scaffolded plugin id starts as `me.<name>`. Set your real publisher (the
 `<publisher>.<name>` prefix) either by editing `id` in `motrix-plugin.json`,
@@ -156,7 +156,7 @@ Field reference (enforced by `motrix-plugin validate`):
 | `activationEvents` | When the host loads you (e.g. `onTaskType:http`, `onStartup`). Required. |
 | `contributes.hooks` | Which lifecycle hooks you implement, each with a `role`. |
 | `contributes.commands` | Commands you register: id `<publisher>.<plugin>.<command>`, max 64. Commands marked `public: true` must declare `argsSchema` + `resultSchema` (a bounded JSON-Schema subset — no `$ref`/`oneOf`, ≤ 8 KiB, depth ≤ 8). |
-| `contributes.operations` | **Unreleased:** host-rendered forms and scoped operation handlers. See the [operations guide](docs/operations.md). |
+| `contributes.operations` | **SDK 2.2.0+:** host-rendered forms and scoped operation handlers. See the [operations guide](docs/operations.md). |
 | `contributes.configuration` | Your settings schema (same bounded subset). Read values via the `config` capability. |
 | `requestedHeapMB` | Sandbox heap, 32 (default) to 64. |
 | `l10n` | Directory of locale JSON files. |

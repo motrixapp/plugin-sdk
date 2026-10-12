@@ -1,15 +1,15 @@
-# Authoring plugin operations (unreleased)
+# Authoring plugin operations (SDK 2.2.0+)
 
 **English** | [简体中文](./operations.zh-CN.md)
 
-> Development implementation, not a released SDK/host contract. Use a matching
-> development checkout of the SDK and a Motrix build that implements the required
-> capabilities. Examples and the operation template require
-> `>=2.0.0-beta.48 <3.0.0`; beta.48 is the planned first supporting host release,
-> not a claim that these features have shipped. Beta.47 is rejected, including
-> development builds still reporting that version. Matching SDK packages remain
-> unpublished, and a public JSON Schema URL does not establish support. The
-> examples are not marketplace releases.
+> The operation schema, API and CLI template are published in SDK 2.2.0.
+> Runtime support still requires a Motrix host implementing the declared
+> capabilities. Examples and the template require `>=2.0.0-beta.48 <3.0.0`;
+> beta.48 is the planned first supporting host release, not a claim that it has
+> shipped. Beta.47 is rejected, including development builds with that version.
+> Raise the minimum if the host feature ships later. SDK publication and a
+> public JSON Schema URL do not establish host support. These examples are not
+> marketplace releases.
 
 ## Start with a complete example
 
@@ -29,44 +29,43 @@ For a TypeScript author, adapting an example is a small task; defining a new
 operation from scratch has a moderate learning cost. The main work is aligning
 schema fields, UI references, locale keys and file grants. No React or CSS is
 needed. This is a source-based assessment, not a measured usability study.
-The development CLI provides an `operation` template that creates the initial
+The CLI provides an `operation` template that creates the initial
 references and files for you. `basic-resolver` and `post-action` remain lifecycle-hook
 templates. Types are still handwritten; schema-to-TypeScript generation and UI
 preview are not implemented.
 
 ### Generate your own operation project
 
-The development CLI now includes `operation`, starting from text deduplication.
-From the SDK repository root, choose an unused project name:
+Use the published SDK 2.2.0 CLI from any working directory, choosing an unused
+project name:
 
 ```sh
-pnpm install --frozen-lockfile
-pnpm build
-node packages/plugin-cli/dist/bin/motrix-plugin.js init my-operation -t operation -p acme
+pnpm --package=@motrix/plugin-cli@2.2.0 dlx motrix-plugin init my-operation -t operation -p acme
 cd my-operation
-pnpm add -D @motrix/plugin-api@file:../packages/plugin-api @motrix/plugin-cli@file:../packages/plugin-cli
+pnpm install
 pnpm run typecheck
 pnpm run validate
 pnpm run pack
 pnpm run lint
 ```
 
-This local dependency step is necessary while the operation API/CLI are
-unreleased. The generated version ranges do not imply published support. If you
-create the project elsewhere, adjust the two `file:` paths to the matching built
-SDK packages. Do not change the host's schema or permissions to install it.
+The generated project declares API/CLI 2.2.0 or compatible newer versions; local
+SDK links are not required. The immutable 2.2.0 CLI still prints an outdated
+"unreleased" notice and generates source-checkout setup instructions. For that
+version, use `pnpm install` as above instead of the generated `file:` setup.
+This documentation and the next CLI release correct the wording. The host
+compatibility requirement remains in force; never change its schema or permissions
+to install the example.
 
-Alternatively, from the SDK root, the create wrapper supports:
+Alternatively, use the published create wrapper:
 
 ```sh
-node packages/create-motrix-plugin/bin/create.mjs my-operation operation
+pnpm create motrix-plugin@2.2.0 my-operation operation
 ```
 
 It defaults to publisher `me`; use the full CLI's `-p` option for a custom one.
-Once matching versions are released, the public entry points will be
-`motrix-plugin init my-operation -t operation -p acme` and
-`pnpm create motrix-plugin my-operation operation`. They are not a claim that
-currently published packages contain the template.
+For SDK development only, build this repository, invoke its CLI binary and use
+matching local API/CLI dependencies to test changes that are not yet published.
 
 The generator creates the complete manifest, handler, English/Chinese locales,
 strict package-based `tsconfig.json`, esbuild config, package scripts, `.gitignore`
@@ -99,12 +98,11 @@ Neither command publishes or signs anything. Install through the compatible
 host's normal third-party package flow and review the requested permissions.
 
 The examples deliberately use this checkout's CLI and ambient API declaration;
-there is no separate example dependency installation. Installing the currently
-published npm packages is not a substitute for building these development
-sources. When moving an example into a standalone project, use matching released
-CLI/API packages once available, and replace the relative ambient declaration
-include with the package's `types` setup. Keep `motrix:plugin-api` external when
-bundling. `pack` validates and bundles; it does not replace TypeScript checking.
+there is no separate example dependency installation. Standalone projects can
+use the published CLI/API 2.2.0 packages and package-based `types` configuration,
+as generated by the template, instead of the relative ambient declaration include.
+Keep `motrix:plugin-api` external when bundling. `pack` validates and bundles;
+it does not replace TypeScript checking.
 
 ## Ownership and files
 

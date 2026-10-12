@@ -1,4 +1,4 @@
-# Text deduplication operation example (unreleased)
+# Text deduplication operation example (requires a compatible host)
 
 **English** | [简体中文](./README.zh-CN.md)
 
@@ -7,12 +7,12 @@ duplicate lines from a user-selected UTF-8 file and saves a new file. It uses th
 same operation protocol as the media example, without FFmpeg, network permission
 or unrestricted filesystem access. It is not a marketplace release.
 
-**Requires the unreleased operations implementation in both the SDK and host.**
+**SDK 2.2.0 is published; runtime support requires a compatible Motrix host.**
 The engine range is `>=2.0.0-beta.48 <3.0.0`, targeting beta.48 as the first
 supporting host release. It must actually provide `operations.ui.v1` and
 `files.text.v1`; raise the minimum if those features ship later. Beta.47 is
 rejected, including development builds still reporting that version. This target
-does not imply published host or npm package support.
+does not imply published host support.
 
 ## Complete source
 
@@ -117,8 +117,9 @@ the sandbox handler, not `visibleWhen` or an invented UI callback.
 
 ## Generate a project with your own identity
 
-The development CLI now provides `init <name> -t operation [-p publisher]` and
-`create-motrix-plugin <name> operation`. They generate this text-operation starting
-point with substituted identities, standalone package-based type checking, build
-scripts and paired READMEs. Follow the [guide](../../docs/operations.md) for the
-matching local SDK dependency setup; published template/API support is not implied.
+The published SDK 2.2.0 CLI provides `init <name> -t operation [-p publisher]`
+and `create-motrix-plugin <name> operation`. They generate this starting point
+with substituted identities, package-based types, build scripts and paired
+READMEs. Follow the [guide](../../docs/operations.md) for registry installation
+and the outdated notice in the immutable 2.2.0 CLI. A compatible host is still
+required.

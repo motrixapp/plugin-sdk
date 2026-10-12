@@ -1,8 +1,8 @@
-# 编写插件操作（尚未发布）
+# 编写插件操作（SDK 2.2.0+）
 
 [English](./operations.md) | **简体中文**
 
-> 本文描述开发中的实现，不代表已经发布的 SDK 或宿主契约。请使用匹配的 SDK 开发源码和具备所需能力的 Motrix 构建。示例与 operation 模板要求 `>=2.0.0-beta.48 <3.0.0`；beta.48 是计划中的首个支持版本，不代表这些功能已发布。beta.47 会被拒绝，包括仍使用该版本号的开发构建。配套 SDK 包仍未发布，公开 JSON Schema 地址也不能证明已支持；示例不是已经上架的插件。
+> 操作 Schema、API 和 CLI 模板已随 SDK 2.2.0 发布。运行仍需宿主提供声明的能力。示例和模板要求 `>=2.0.0-beta.48 <3.0.0`；beta.48 是计划中的首个支持版本，不代表宿主功能已发布。beta.47 会被拒绝，包括仍使用该版本号的开发构建；若宿主功能延期，必须提高最低版本。SDK 发布及公开 JSON Schema 地址不能证明宿主支持；这些示例不是已上架插件。
 
 ## 从完整示例开始
 
@@ -11,33 +11,31 @@
 
 两个目录都包含完整清单、处理函数、中英文语言文件和 TypeScript 配置，是可以执行的源码示例。下文代码片段只解释局部字段，不是完整清单。
 
-对熟悉 TypeScript 的开发者，修改现有示例的工作量较小；从零定义操作的学习成本中等。主要难点是对齐参数 Schema、UI 引用、翻译键和文件授权，无需编写 React 或 CSS。这是基于源码的评估，没有经过开发者可用性研究。开发版 CLI 已提供 `operation` 模板，自动生成初始引用和文件；`basic-resolver` 和 `post-action` 仍为生命周期 Hook 模板。类型仍需手写维护，尚未实现从 Schema 生成 TypeScript 类型或 UI 预览。
+对熟悉 TypeScript 的开发者，修改现有示例的工作量较小；从零定义操作的学习成本中等。主要难点是对齐参数 Schema、UI 引用、翻译键和文件授权，无需编写 React 或 CSS。这是基于源码的评估，没有经过开发者可用性研究。CLI 已提供 `operation` 模板，自动生成初始引用和文件；`basic-resolver` 和 `post-action` 仍为生命周期 Hook 模板。类型仍需手写维护，尚未实现从 Schema 生成 TypeScript 类型或 UI 预览。
 
 ### 生成自己的操作项目
 
-开发版 CLI 现已提供 `operation` 模板，以文本去重为起点。从 SDK 仓库根目录开始，使用尚未占用的项目名：
+在任意工作目录使用已发布的 SDK 2.2.0 CLI，选择尚未占用的项目名：
 
 ```sh
-pnpm install --frozen-lockfile
-pnpm build
-node packages/plugin-cli/dist/bin/motrix-plugin.js init my-operation -t operation -p acme
+pnpm --package=@motrix/plugin-cli@2.2.0 dlx motrix-plugin init my-operation -t operation -p acme
 cd my-operation
-pnpm add -D @motrix/plugin-api@file:../packages/plugin-api @motrix/plugin-cli@file:../packages/plugin-cli
+pnpm install
 pnpm run typecheck
 pnpm run validate
 pnpm run pack
 pnpm run lint
 ```
 
-操作 API/CLI 尚未发布时，需要上述本地依赖步骤，生成的版本范围不代表已发布支持。若在其他位置创建项目，将两个 `file:` 路径调整为匹配且已构建的 SDK 包位置。不能通过修改宿主 Schema 或权限来安装。
+生成项目声明 API/CLI 2.2.0 或兼容的新版本，无需链接本地 SDK。已发布的 2.2.0 CLI 仍会显示过时的“尚未发布”提示，并生成源码依赖安装说明；该版本请按上方执行 `pnpm install`，不用生成文档里的 `file:` 配置。本次文档和下一版 CLI 会修正文案。宿主兼容性要求仍有效，不能通过修改宿主 Schema 或权限来安装。
 
-也可以从 SDK 根目录使用 create 包装器：
+也可使用已发布的 create 包装器：
 
 ```sh
-node packages/create-motrix-plugin/bin/create.mjs my-operation operation
+pnpm create motrix-plugin@2.2.0 my-operation operation
 ```
 
-它默认使用发布者 `me`；自定义发布者请使用完整 CLI 的 `-p`。配套版本正式发布后，公开入口为 `motrix-plugin init my-operation -t operation -p acme` 和 `pnpm create motrix-plugin my-operation operation`，这不代表当前已发布包包含该模板。
+它默认使用发布者 `me`；自定义发布者请使用完整 CLI 的 `-p`。仅在开发 SDK 未发布改动时，才需要构建本仓库、调用仓库内 CLI，并使用匹配的本地 API/CLI 依赖。
 
 生成器提供完整清单、处理函数、中英文语言文件、基于安装包的严格 `tsconfig.json`、esbuild 配置、package scripts、`.gitignore` 和成对 README。操作、命令和激活 ID 自动使用项目的发布者与名称。模板只申请所选文件读写权限，包含插件页面及单任务菜单入口，使用 `preserve-inputs`。提供明确的 typecheck、validate、pack、lint 脚本；pack 不代替类型检查，处理函数类型仍需手写维护。生成项目不会安装、启动、签名或发布插件。
 
@@ -57,7 +55,7 @@ node ../../packages/plugin-cli/dist/bin/motrix-plugin.js lint
 
 将 `text-tools` 换成 `media-merge` 即可运行另一个示例。`pack` 会自行打包 `src/index.ts`，将未签名 `.moext` 写入示例目录下被 Git 忽略的 `dist/`。`lint` 读取构建后的 bundle，必须放在 **pack 之后**。这些命令不会签名或发布。通过兼容宿主的正常第三方安装流程安装，并检查所申请的权限。
 
-示例直接使用当前仓库的 CLI 和 ambient API 类型声明，不需要为示例单独安装依赖。安装当前 npm 已发布包不能替代构建这些开发源码。将示例移到独立项目时，应在匹配版本正式发布后使用配套 CLI/API 包，将相对路径类型声明改成包的 `types` 配置；打包时保持 `motrix:plugin-api` 为 external。`pack` 负责校验和打包，不代替 TypeScript 类型检查。
+示例直接使用当前仓库的 CLI 和 ambient API 类型声明，不需要为示例单独安装依赖。独立项目可使用已发布的 CLI/API 2.2.0 及模板生成的包级 `types` 配置，替代相对路径类型声明。打包时保持 `motrix:plugin-api` 为 external。`pack` 负责校验和打包，不代替 TypeScript 类型检查。
 
 ## 文件与职责
 

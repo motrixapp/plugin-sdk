@@ -1,4 +1,4 @@
-# Media merge operation example (unreleased)
+# Media merge operation example (requires a compatible host)
 
 **English** | [简体中文](./README.zh-CN.md)
 
@@ -9,7 +9,7 @@ This teaching copy uses **`example.media-merge`** and a distinct display name so
 it can be installed as an unsigned third-party example without impersonating the
 official plugin or requiring its signing key. It is not a marketplace release.
 
-**Requires the unreleased operations implementation in both the SDK and host.**
+**SDK 2.2.0 is published; runtime support requires a compatible Motrix host.**
 `engines.motrix` is `>=2.0.0-beta.48 <3.0.0`, targeting beta.48 as the first
 supporting host release. This is a release target, not published availability.
 Beta.47 is rejected, including development builds still reporting that version.
@@ -48,8 +48,8 @@ publish. Install using the compatible host's normal third-party package flow.
 Review `ffmpeg`, `files.selected.read` and `files.selected.write` permissions.
 There is no network permission or download lifecycle hook. A published CLI with
 an older embedded schema cannot validate this example. The TypeScript include is
-checkout-relative by design; standalone projects need matching API types when
-those packages are released.
+checkout-relative by design; standalone projects can use the published
+API/CLI 2.2.0 packages with package-based types.
 
 ## Behavior and UI
 

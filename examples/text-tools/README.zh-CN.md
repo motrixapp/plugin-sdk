@@ -1,10 +1,10 @@
-# 文本去重操作示例（尚未发布）
+# 文本去重操作示例（需要兼容宿主）
 
 [English](./README.md) | **简体中文**
 
 这是完整的未签名第三方示例 `community.text-tools`，去除用户所选 UTF-8 文件中的重复行并另存新文件。它与媒体示例使用相同的操作协议，不需要 FFmpeg、网络权限或任意文件系统访问。它不是已经上架的插件。
 
-**需要 SDK 和宿主都包含尚未发布的操作实现。** 引擎范围为 `>=2.0.0-beta.48 <3.0.0`，以 beta.48 为首个支持版本目标；它必须实际提供 `operations.ui.v1` 和 `files.text.v1`，若延期须同步提高最低版本。beta.47 会被拒绝，包括仍使用该版本号的开发构建。此目标不代表宿主或 npm 包已发布支持。
+**SDK 2.2.0 已发布；运行仍需要兼容的 Motrix 宿主。** 引擎范围为 `>=2.0.0-beta.48 <3.0.0`，以 beta.48 为首个支持版本目标；它必须实际提供 `operations.ui.v1` 和 `files.text.v1`，若延期须同步提高最低版本。beta.47 会被拒绝，包括仍使用该版本号的开发构建。此目标不代表宿主已发布支持。
 
 ## 完整源码
 
@@ -71,4 +71,4 @@ node ../../packages/plugin-cli/dist/bin/motrix-plugin.js lint
 
 ## 生成自己的项目
 
-开发版 CLI 现提供 `init <name> -t operation [-p publisher]` 和 `create-motrix-plugin <name> operation`，以此文本操作为起点，自动替换身份，生成基于安装包的独立类型检查配置、构建脚本和成对 README。请按 [指南](../../docs/operations.zh-CN.md) 配置匹配的本地 SDK 依赖，不能据此推断已发布模板或 API 支持。
+已发布的 SDK 2.2.0 CLI 提供 `init <name> -t operation [-p publisher]` 和 `create-motrix-plugin <name> operation`，自动替换身份，生成包级类型配置、构建脚本和成对 README。[指南](../../docs/operations.zh-CN.md) 说明 npm 依赖安装方式，以及不可修改的 2.2.0 CLI 中过时提示的处理方式。运行仍需要兼容宿主。

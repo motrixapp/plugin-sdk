@@ -68,8 +68,16 @@ After the version/tooling PRs are merged, use a clean, current `main` checkout a
 run this command yourself:
 
 ```bash
+pnpm whoami --registry=https://registry.npmjs.org
+# If this fails, log in with the package manager used for publication:
+pnpm login --registry=https://registry.npmjs.org
+# Continue only after pnpm whoami returns the intended publisher account.
 pnpm run release -- --publish
 ```
+
+An authenticated `npm whoami` does not prove that pnpm's selected credentials
+are valid. Complete any browser/2FA challenge from pnpm promptly; an expired
+challenge requires rerunning the command to obtain a fresh link.
 
 This reruns the complete preparation pipeline. Publish mode rejects CI and
 non-interactive terminals before running the pipeline. There is no `--yes`,
@@ -100,8 +108,19 @@ The script rechecks Git state and archive integrity after confirmation and befor
 each upload. It invokes pnpm with the verified tarball, explicit public registry,
 public access and `latest` tag, preserving Git checks and interactive OTP support.
 Each package must become visible with the matching integrity before the next is
-published. Missing metadata is polled up to 15 times at two-second intervals;
-each HTTP request has a 15-second timeout. Other registry errors stop immediately.
+published. Once the upload command succeeds, its status becomes `verifying`.
+Verification waits up to five minutes using a monotonic deadline, with delays
+growing from two to ten seconds and a request timeout of at most 15 seconds
+(bounded by the remaining deadline). Each metadata read uses a fresh query key
+and requests cache revalidation so a preflight 404 is not reused.
+
+Only verification reads are retried: missing metadata, network failures,
+timeouts, HTTP 429 and HTTP 5xx. `Retry-After` can extend the polling delay within
+the deadline; progress is printed at least every 30 seconds while waiting.
+Authentication/authorization errors, malformed metadata and integrity conflicts
+stop immediately. Preflight registry errors still stop before uploads. The
+script never retries an upload automatically or advances past an unverified
+package.
 
 ## Failure and partial-release recovery
 
@@ -110,6 +129,10 @@ fails, later packages are not attempted, and nothing is unpublished or retried
 automatically. Preserve the run directory and inspect `release.json` and npm.
 A `publishing` status is uncertain: the server may have accepted an upload even
 if the client failed or metadata was not yet visible.
+A `verifying` status means the upload command succeeded but registry verification
+has not finished. A verification timeout does not mean the upload failed; the
+report preserves the attempt count and latest verification message. Check npm
+before retrying, and keep the original artifacts.
 
 Once the cause is resolved, rerun from the same reviewed source with the pinned
 build tools. The script rebuilds and compares exact published integrity values;

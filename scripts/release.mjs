@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 import { execFile, spawn } from 'node:child_process'
-import { createHash } from 'node:crypto'
+import { createHash, randomUUID } from 'node:crypto'
 import { mkdir, mkdtemp, readFile, writeFile } from 'node:fs/promises'
 import path from 'node:path'
 import { createInterface } from 'node:readline/promises'
@@ -18,6 +18,16 @@ export const PACKAGES = [
 ]
 const CONFIRMATION = 'publish SDK packages to npm'
 const STABLE_VERSION = /^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)$/
+const REQUEST_TIMEOUT_MS = 15_000
+const VERIFICATION_TIMEOUT_MS = 5 * 60_000
+
+export class RegistryLookupError extends Error {
+  constructor(message, { retryable = false, retryAfterMs = 0 } = {}) {
+    super(message)
+    this.retryable = retryable
+    this.retryAfterMs = retryAfterMs
+  }
+}
 
 export function parseArgs(args) {
   const flags = args.filter((arg) => arg !== '--')
@@ -69,21 +79,114 @@ async function execute(command, args, { cwd, capture = false }) {
   return ''
 }
 
-async function readVersion(name, version) {
-  const response = await fetch(
-    new URL(
-      `${encodeURIComponent(name)}/${encodeURIComponent(version)}`,
-      REGISTRY
-    ),
-    { redirect: 'error', signal: AbortSignal.timeout(15_000) }
+export async function readVersion(
+  name,
+  version,
+  { fetch: request = fetch, timeoutMs = REQUEST_TIMEOUT_MS } = {}
+) {
+  const url = new URL(
+    `${encodeURIComponent(name)}/${encodeURIComponent(version)}`,
+    REGISTRY
   )
-  if (response.status === 404) return null
-  if (!response.ok) {
-    throw new Error(
-      `Registry lookup failed for ${name}@${version}: HTTP ${response.status}.`
+  // Preflight may have cached a 404 before the version was uploaded.
+  url.searchParams.set('release-check', randomUUID())
+  const signal = AbortSignal.timeout(timeoutMs)
+  try {
+    const response = await request(url, {
+      redirect: 'error',
+      cache: 'no-store',
+      headers: { Accept: 'application/json', 'Cache-Control': 'no-cache' },
+      signal,
+    })
+    if (response.ok) {
+      const metadata = await response.json()
+      if (!metadata || typeof metadata !== 'object' || Array.isArray(metadata))
+        throw new Error(`Malformed registry metadata for ${name}@${version}.`)
+      return metadata
+    }
+    await response.body?.cancel()
+    if (response.status === 404) return null
+    const retryAfter = response.headers.get('retry-after')
+    const retryAfterMs = /^\d+$/.test(retryAfter ?? '')
+      ? Number(retryAfter) * 1000
+      : Math.max(0, Date.parse(retryAfter) - Date.now()) || 0
+    throw new RegistryLookupError(
+      `Registry lookup failed for ${name}@${version}: HTTP ${response.status}.`,
+      {
+        retryable: response.status === 429 || response.status >= 500,
+        retryAfterMs,
+      }
     )
+  } catch (error) {
+    if (signal.aborted || error instanceof TypeError)
+      throw new RegistryLookupError(
+        `Registry lookup for ${name}@${version} timed out or lost its connection.`,
+        { retryable: true }
+      )
+    throw error
   }
-  return response.json()
+}
+
+async function verifyPublication(pkg, { lookup, wait, now, log, save }) {
+  const started = now()
+  const deadline = started + VERIFICATION_TIMEOUT_MS
+  let delay = 2000
+  pkg.status = 'verifying'
+  pkg.verificationAttempts = 0
+  await save()
+  log(
+    `Uploaded ${pkg.name}@${pkg.version}; verifying npm visibility and integrity (up to 5 minutes).`
+  )
+  while (now() < deadline) {
+    pkg.verificationAttempts++
+    let reason = 'version metadata is not visible yet'
+    let retryAfterMs = 0
+    try {
+      const metadata = await lookup(pkg.name, pkg.version, {
+        timeoutMs: Math.max(
+          1,
+          Math.ceil(Math.min(REQUEST_TIMEOUT_MS, deadline - now()))
+        ),
+      })
+      if (metadata) {
+        matchesPublished(pkg, metadata)
+        pkg.status = 'published'
+        delete pkg.verificationMessage
+        await save()
+        log(`Verified ${pkg.name}@${pkg.version}.`)
+        return
+      }
+    } catch (error) {
+      if (!(error instanceof RegistryLookupError) || !error.retryable)
+        throw error
+      reason = error.message
+      retryAfterMs = error.retryAfterMs
+    }
+    pkg.verificationMessage = reason
+    await save()
+    const remaining = Math.max(0, deadline - now())
+    if (!remaining) break
+    const next = Math.min(remaining, Math.max(delay, retryAfterMs))
+    log(
+      `Waiting for ${pkg.name}@${pkg.version}: ${reason}; ${Math.round((now() - started) / 1000)}s elapsed, next check in ${Math.ceil(next / 1000)}s.`
+    )
+    // Long Retry-After values still produce a heartbeat at least every 30s.
+    const resumeAt = now() + next
+    while (now() < resumeAt && now() < deadline) {
+      const interval = Math.min(30_000, resumeAt - now(), deadline - now())
+      if (interval <= 0) break
+      await wait(interval)
+      const remainingWait = Math.min(resumeAt, deadline) - now()
+      if (remainingWait > 0)
+        log(
+          `Still waiting for ${pkg.name}@${pkg.version}; next check in ${Math.ceil(remainingWait / 1000)}s.`
+        )
+    }
+    delay = Math.min(delay * 2, 10_000)
+  }
+  throw new Error(
+    `Upload completed for ${pkg.name}@${pkg.version}, but npm verification timed out after 5 minutes. No upload was retried. Preserve this report and rerun the release command after npm becomes visible; identical published packages will be skipped.`
+  )
 }
 
 async function confirm(message) {
@@ -285,6 +388,7 @@ export async function runRelease(
     dependencies.wait ??
     ((ms) => new Promise((resolve) => setTimeout(resolve, ms)))
   const log = dependencies.log ?? console.log
+  const now = dependencies.now ?? (() => performance.now())
   const env = dependencies.env ?? process.env
   const interactive =
     dependencies.interactive ??
@@ -427,22 +531,7 @@ export async function runRelease(
         ],
         { cwd: root }
       )
-      let verified = false
-      for (let attempt = 0; attempt < 15; attempt++) {
-        const metadata = await lookup(pkg.name, pkg.version)
-        if (metadata) {
-          matchesPublished(pkg, metadata)
-          verified = true
-          break
-        }
-        if (attempt < 14) await wait(2000)
-      }
-      if (!verified)
-        throw new Error(
-          `Publication of ${pkg.name}@${pkg.version} is not yet verifiable. Check npm before retrying.`
-        )
-      pkg.status = 'published'
-      await save()
+      await verifyPublication(pkg, { lookup, wait, now, log, save })
     }
     report.phase = 'complete'
     await save()

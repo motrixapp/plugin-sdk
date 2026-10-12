@@ -15,8 +15,8 @@
     "dev": "motrix-plugin dev"
   },
   "devDependencies": {
-    "@motrix/plugin-api": "^2.1.0",
-    "@motrix/plugin-cli": "^2.1.1",
+    "@motrix/plugin-api": "^2.2.0",
+    "@motrix/plugin-cli": "^2.2.0",
     "esbuild": "^0.28.2",
     "typescript": "^7.0.2"
   }

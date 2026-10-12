@@ -19,6 +19,8 @@ import {
   PACKAGES,
   parseArgs,
   REGISTRY,
+  RegistryLookupError,
+  readVersion,
   runRelease,
 } from './release.mjs'
 
@@ -65,6 +67,9 @@ async function fixture(t) {
     fail: null,
     packMutation: null,
     onPublish: null,
+    elapsed: 0,
+    waits: [],
+    logs: [],
   }
   const metadata = (name) => {
     const entry = [...state.archives.values()].find(
@@ -134,8 +139,12 @@ async function fixture(t) {
     execute,
     env: {},
     interactive: true,
-    log: () => {},
-    wait: async () => {},
+    log: (message) => state.logs.push(message),
+    now: () => state.elapsed,
+    wait: async (ms) => {
+      state.waits.push(ms)
+      state.elapsed += ms
+    },
     readVersion: async (name) => {
       state.lookups++
       return state.published.get(name) ?? null
@@ -474,9 +483,189 @@ test('unverifiable publication stops without retrying the upload or later packag
   f.state.onPublish = async () => {}
   await assert.rejects(
     runRelease({ publish: true, root: f.root }, f.dependencies),
-    /not yet verifiable/
+    /verification timed out after 5 minutes/
   )
   assert.deepEqual(f.state.uploads, [PACKAGES[0][1]])
+  assert.equal(f.state.elapsed, 300_000)
+  assert.equal((await f.report()).packages[0].status, 'verifying')
+  assert.ok(f.state.logs.some((line) => line.includes('next check in')))
+})
+
+test('delayed visibility beyond the old polling limit completes without another upload', async (t) => {
+  const f = await fixture(t)
+  let attempts = 0
+  const lookup = async (name) => {
+    if (!f.state.published.has(name)) return null
+    if (name === PACKAGES[0][1] && ++attempts <= 17) {
+      assert.deepEqual(f.state.uploads, [name])
+      return null
+    }
+    return f.metadata(name)
+  }
+  const result = await runRelease(
+    { publish: true, root: f.root },
+    { ...f.dependencies, readVersion: lookup }
+  )
+  assert.equal(result.phase, 'complete')
+  assert.equal(result.packages[0].verificationAttempts, 18)
+  assert.ok(f.state.elapsed > 28_000)
+  assert.deepEqual(
+    f.state.uploads,
+    PACKAGES.map(([, name]) => name)
+  )
+})
+
+test('verification retries transient reads, observes Retry-After and reports progress', async (t) => {
+  const f = await fixture(t)
+  let attempts = 0
+  const lookup = async (name) => {
+    if (!f.state.published.has(name)) return null
+    if (name === PACKAGES[0][1] && ++attempts <= 2)
+      throw new RegistryLookupError('HTTP 429', {
+        retryable: true,
+        retryAfterMs: 45_000,
+      })
+    return f.metadata(name)
+  }
+  await runRelease(
+    { publish: true, root: f.root },
+    { ...f.dependencies, readVersion: lookup }
+  )
+  assert.equal(f.state.elapsed, 90_000)
+  assert.ok(f.state.waits.every((ms) => ms <= 30_000))
+  assert.ok(f.state.logs.some((line) => line.includes('Still waiting')))
+  assert.deepEqual(
+    f.state.uploads,
+    PACKAGES.map(([, name]) => name)
+  )
+})
+
+test('verification caps a long Retry-After at its deadline', async (t) => {
+  const f = await fixture(t)
+  const lookup = async (name) => {
+    if (!f.state.published.has(name)) return null
+    throw new RegistryLookupError('HTTP 503', {
+      retryable: true,
+      retryAfterMs: 600_000,
+    })
+  }
+  await assert.rejects(
+    runRelease(
+      { publish: true, root: f.root },
+      { ...f.dependencies, readVersion: lookup }
+    ),
+    /verification timed out/
+  )
+  assert.equal(f.state.elapsed, 300_000)
+  assert.deepEqual(f.state.uploads, [PACKAGES[0][1]])
+})
+
+test('verification stops at its deadline after an unexpectedly long timer delay', async (t) => {
+  const f = await fixture(t)
+  let waits = 0
+  await assert.rejects(
+    runRelease(
+      { publish: true, root: f.root },
+      {
+        ...f.dependencies,
+        wait: async () => {
+          waits++
+          f.state.elapsed += 600_000
+        },
+        readVersion: async (name) => {
+          if (!f.state.published.has(name)) return null
+          throw new RegistryLookupError('HTTP 429', {
+            retryable: true,
+            retryAfterMs: 120_000,
+          })
+        },
+      }
+    ),
+    /verification timed out/
+  )
+  assert.equal(waits, 1)
+  assert.deepEqual(f.state.uploads, [PACKAGES[0][1]])
+})
+
+for (const failure of ['authorization', 'integrity']) {
+  test(`verification fails immediately on ${failure} without later uploads`, async (t) => {
+    const f = await fixture(t)
+    const lookup = async (name) => {
+      if (!f.state.published.has(name)) return null
+      if (failure === 'authorization') throw new RegistryLookupError('HTTP 403')
+      return { ...f.metadata(name), dist: { integrity: 'sha512-wrong' } }
+    }
+    await assert.rejects(
+      runRelease(
+        { publish: true, root: f.root },
+        { ...f.dependencies, readVersion: lookup }
+      ),
+      /HTTP 403|will not be overwritten/
+    )
+    assert.equal(f.state.elapsed, 0)
+    assert.deepEqual(f.state.uploads, [PACKAGES[0][1]])
+  })
+}
+
+test('version lookups request fresh metadata and never reuse a preflight cache key', async () => {
+  const requests = []
+  const request = async (url, options) => {
+    requests.push({ url, options })
+    return new Response(null, { status: 404 })
+  }
+  assert.equal(
+    await readVersion('@motrix/plugin-api', '2.2.0', { fetch: request }),
+    null
+  )
+  await readVersion('@motrix/plugin-api', '2.2.0', { fetch: request })
+  assert.notEqual(requests[0].url.href, requests[1].url.href)
+  for (const { url, options } of requests) {
+    assert.equal(url.origin, 'https://registry.npmjs.org')
+    assert.equal(decodeURIComponent(url.pathname), '/@motrix/plugin-api/2.2.0')
+    assert.equal(options.cache, 'no-store')
+    assert.equal(options.headers['Cache-Control'], 'no-cache')
+    assert.equal(options.redirect, 'error')
+  }
+})
+
+for (const status of [401, 403, 429, 500, 503]) {
+  test(`version lookup classifies HTTP ${status} without treating it as absent`, async () => {
+    await assert.rejects(
+      readVersion('@motrix/plugin-api', '2.2.0', {
+        fetch: async () =>
+          new Response(null, { status, headers: { 'Retry-After': '17' } }),
+      }),
+      (error) => {
+        assert.ok(error instanceof RegistryLookupError)
+        assert.equal(error.retryable, status === 429 || status >= 500)
+        assert.equal(error.retryAfterMs, 17_000)
+        return true
+      }
+    )
+  })
+}
+
+test('a network failure is retryable but malformed registry data is not', async () => {
+  await assert.rejects(
+    readVersion('sample', '2.2.0', {
+      fetch: async () => {
+        throw new TypeError('fetch failed')
+      },
+    }),
+    (error) => error instanceof RegistryLookupError && error.retryable
+  )
+  await assert.rejects(
+    readVersion('sample', '2.2.0', {
+      fetch: async () => new Response('not json'),
+    }),
+    SyntaxError
+  )
+  await assert.rejects(
+    readVersion('sample', '2.2.0', {
+      fetch: async () => new Response('null'),
+    }),
+    /Malformed registry metadata/
+  )
 })
 
 test('real gzip tar archives are inspected without extracting files to disk', async (t) => {

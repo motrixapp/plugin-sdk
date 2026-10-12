@@ -1,10 +1,10 @@
-# 音视频合并操作示例（尚未发布）
+# 音视频合并操作示例（需要兼容宿主）
 
 [English](./README.md) | **简体中文**
 
 这是根据官方可选插件 `motrix.media-merge` 改编的完整 SDK 示例。官方实现和签名权限仍属于 [motrixapp/builtin-plugins](https://github.com/motrixapp/builtin-plugins)。教学版本使用 **`example.media-merge`** 和独立显示名称，可以作为未签名第三方示例安装，不冒用官方插件，也不需要官方签名密钥。它不是已经上架的插件。
 
-**需要 SDK 和宿主都包含尚未发布的操作实现。** `engines.motrix` 为 `>=2.0.0-beta.48 <3.0.0`，以 beta.48 为首个支持版本目标，不代表已经发布。beta.47 会被拒绝，包括仍使用该版本号的开发构建。若功能延期，最低版本也必须相应提高。使用匹配的 SDK 包，并在兼容宿主中配置 FFmpeg。
+**SDK 2.2.0 已发布；运行仍需要兼容的 Motrix 宿主。** `engines.motrix` 为 `>=2.0.0-beta.48 <3.0.0`，以 beta.48 为首个支持版本目标，不代表已经发布。beta.47 会被拒绝，包括仍使用该版本号的开发构建。若功能延期，最低版本也必须相应提高。使用匹配的 SDK 包，并在兼容宿主中配置 FFmpeg。
 
 ## 完整源码
 
@@ -32,7 +32,7 @@ node ../../packages/plugin-cli/dist/bin/motrix-plugin.js pack
 node ../../packages/plugin-cli/dist/bin/motrix-plugin.js lint
 ```
 
-输出为 `dist/example.media-merge-0.1.0.moext`。这些命令不会签名或发布。通过兼容宿主的正常第三方安装流程安装，检查 `ffmpeg`、`files.selected.read`、`files.selected.write` 权限。示例没有网络权限或下载生命周期 Hook。内嵌旧 Schema 的已发布 CLI 不能校验此示例。TypeScript include 有意使用仓库相对路径；独立项目需要在相关包发布后使用匹配的 API 类型。
+输出为 `dist/example.media-merge-0.1.0.moext`。这些命令不会签名或发布。通过兼容宿主的正常第三方安装流程安装，检查 `ffmpeg`、`files.selected.read`、`files.selected.write` 权限。示例没有网络权限或下载生命周期 Hook。内嵌旧 Schema 的已发布 CLI 不能校验此示例。TypeScript include 有意使用仓库相对路径；独立项目可使用已发布的 CLI/API 2.2.0 和包级类型配置。
 
 ## 行为与界面
 

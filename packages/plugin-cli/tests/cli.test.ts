@@ -144,7 +144,7 @@ describe('motrix-plugin CLI', () => {
         cwd: tmpDir,
         encoding: 'utf8',
       })
-      expect(stdout).toContain('Unreleased operation template')
+      expect(stdout).toContain('Operation template requires SDK 2.2.0+')
       const project = path.join(tmpDir, 'text-demo')
       const manifest = JSON.parse(
         await readFile(path.join(project, 'motrix-plugin.json'), 'utf8')

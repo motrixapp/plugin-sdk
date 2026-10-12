@@ -4,17 +4,17 @@
 
 为 `{{PLUGIN_ID}}` 生成的文本去重操作项目。
 
-> **协议与模板尚未发布。** 使用包含操作 v1、可组合 UI 和受限文本文件能力的 Motrix 构建及 SDK 包。宿主范围为 `>=2.0.0-beta.48 <3.0.0`，以 beta.48 为首个支持版本目标。beta.47 会被拒绝，包括仍使用该版本号的开发构建。此目标与依赖版本范围不代表已发布支持；若功能晚于 beta.48 发布，须同步提高最低宿主版本。
+> **需要 SDK 2.2.0+ 和兼容的 Motrix 宿主。** SDK 操作协议与模板已发布，宿主仍需提供操作 v1、可组合 UI 和受限文本文件能力。宿主范围为 `>=2.0.0-beta.48 <3.0.0`，以 beta.48 为首个支持版本目标。beta.47 会被拒绝，包括仍使用该版本号的开发构建。SDK 发布不代表宿主功能已发布；若功能晚于 beta.48 发布，须同步提高最低宿主版本。
 
-## 配置匹配的开发依赖
+## 安装依赖
 
-先在匹配的 plugin-sdk 源码仓库执行 `pnpm install --frozen-lockfile` 和 `pnpm build`。如果本项目直接创建在该仓库根目录下，请在**本项目目录**执行：
+在本项目目录安装已发布依赖：
 
 ```sh
-pnpm add -D @motrix/plugin-api@file:../packages/plugin-api @motrix/plugin-cli@file:../packages/plugin-cli
+pnpm install
 ```
 
-如果项目位于其他位置，将两个 `file:` 路径改为实际构建好的 SDK 包位置。不能用普通安装旧版 npm API/CLI 来代替这一步；源码中的 Schema 会内嵌到 CLI 构建产物中。配套 SDK 正式发布后，再将本地依赖改为实际发布版本；模板目前不指定已发布 SDK 包的最低版本。
+项目声明 API/CLI 2.2.0 或兼容的新版本，不需要本地 SDK 仓库。仅在测试尚未发布的 SDK 改动时，才使用匹配的本地 API/CLI 依赖。
 
 ## 检查与打包
 
@@ -54,4 +54,4 @@ pnpm run lint
 - 已有目标、过期或变化的输入、未经授权引用应被拒绝；不能移除宿主授权检查来运行示例。
 - 在保存前取消并等待清理。小文件可能快到无法手工取消，不能将其算作取消验证证据。
 
-控件、布局及条件、文件授权、限制和未支持能力见 [SDK 操作指南](https://github.com/motrixapp/plugin-sdk/blob/main/docs/operations.zh-CN.md)。源码发布前，请改为阅读配套 SDK 仓库中的 `docs/operations.zh-CN.md`。新增 UI 节点或能力需要宿主支持；模板不提供自定义 renderer HTML、JavaScript 或 CSS。
+控件、布局及条件、文件授权、限制和未支持能力见 [SDK 操作指南](https://github.com/motrixapp/plugin-sdk/blob/main/docs/operations.zh-CN.md)。新增 UI 节点或能力需要宿主支持；模板不提供自定义 renderer HTML、JavaScript 或 CSS。

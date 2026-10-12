@@ -40,7 +40,7 @@ export async function init(
     ...(opts.template === 'operation'
       ? {
           notice:
-            'Unreleased operation template: use matching development SDK packages and host. Read README.md before installing dependencies; published package versions do not establish operation support.',
+            'Operation template requires SDK 2.2.0+ and a compatible Motrix host with operations support. Read README.md for the planned beta.48 host minimum; SDK publication does not establish host availability.',
         }
       : {}),
   }

@@ -273,7 +273,7 @@ Plugins 页安装(**Install from .moext**)。安装时 Motrix 会弹出 consent
 pnpm install
 pnpm build            # tsup, all packages
 pnpm typecheck
-pnpm test             # vitest, all packages
+pnpm test             # release-tool tests + package suites
 pnpm lint             # biome
 pnpm run check:facade # façade-purity guard
 ```
@@ -282,6 +282,10 @@ pnpm run check:facade # façade-purity guard
 `packages/plugin-manifest-schema`(`plugin-cli` 的 `src/manifest-schema.ts`
 是受守护的纯 re-export);schema 发新版时必须同批发布配套的 CLI 版本,
 因为 CLI 在构建时内嵌了 schema。
+
+## SDK 发布
+
+`pnpm run release` 统一校验、构建和打包四个 SDK 包，默认不上传。正式发布使用需要人工确认的独立模式，CI 只准备产物。前置条件、固定发布顺序和部分发布恢复方式见[发布指南](docs/releasing.zh-CN.md)。
 
 ## License
 

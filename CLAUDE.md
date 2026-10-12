@@ -34,6 +34,7 @@ pnpm typecheck          # pnpm -r typecheck
 pnpm test               # pnpm -r test
 pnpm lint               # biome check .
 pnpm run check:facade   # scripts/check-facade.mjs
+pnpm run release        # validate, build and pack; never uploads by default
 ```
 
 Prefer `pnpm exec` over `npx` for one-off CLI invocations in this workspace.
@@ -83,11 +84,23 @@ Prefer `pnpm exec` over `npx` for one-off CLI invocations in this workspace.
 
 ## Publish order
 
-`pnpm publish` per package, human-run only — never executed by an agent:
+`pnpm run release` is the canonical SDK preparation entrypoint. It installs
+locked dependencies, validates, builds, tests and packs all four packages.
+Agents may run this default/dry-run mode.
+
+`pnpm run release -- --publish` is human-run only — never executed by an
+agent. It requires a clean, current `main`, an interactive terminal outside CI,
+and explicit confirmation after the package plan is displayed. It invokes
+`pnpm publish` for verified tarballs in this order:
 
 ```
 plugin-manifest-schema → plugin-api → plugin-cli → create-motrix-plugin
 ```
+
+See [the release guide](docs/releasing.md) and its
+[Chinese counterpart](docs/releasing.zh-CN.md) for requirements, artifacts and
+partial-release recovery. The script does not create tags, merge PRs or sign
+plugin bundles.
 
 ## Conventions
 

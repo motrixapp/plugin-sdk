@@ -87,3 +87,8 @@ jobs:
 
       - name: Schema façade check
         run: pnpm run check:facade
+
+      # Preparation never uploads and is permitted on detached PR checkouts.
+      # The publish mode rejects CI and requires an interactive confirmation.
+      - name: SDK release preparation (no publication)
+        run: pnpm run release

@@ -291,7 +291,7 @@ public commands — ask for the minimum you need; broad host patterns and
 pnpm install
 pnpm build            # tsup, all packages
 pnpm typecheck
-pnpm test             # vitest, all packages
+pnpm test             # release-tool tests + package suites
 pnpm lint             # biome
 pnpm run check:facade # façade-purity guard
 ```
@@ -301,6 +301,13 @@ in `packages/plugin-manifest-schema` only (`plugin-cli`'s
 `src/manifest-schema.ts` is a guarded pure re-export), and a schema release
 always ships together with a matching CLI release, because the CLI embeds
 the schema at build time.
+
+## SDK releases
+
+`pnpm run release` validates, builds and packs all four SDK packages without
+uploading. Publication is a separate, human-confirmed mode; CI only prepares
+artifacts. See the [release guide](docs/releasing.md) for requirements, the
+fixed package order and recovery from a partial release.
 
 ## License
 
